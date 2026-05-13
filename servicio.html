@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>.14 — Panel de Servicio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Bebas Neue"', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              red:    '#d8232a',
+              green:  '#1f8a4c',
+              cream:  '#fdf8f1',
+              dark:   '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .display-font { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+    @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .pop-in { animation: pop 0.25s ease-out; }
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(216, 35, 42, 0.6); }
+      70%  { box-shadow: 0 0 0 12px rgba(216, 35, 42, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(216, 35, 42, 0); }
+    }
+    .new-order { animation: pulse-ring 1.5s 2; }
+  </style>
+</head>
+<body class="bg-gray-100 text-brand-dark min-h-screen">
+  <!-- Header -->
+  <header class="bg-brand-dark text-white shadow-lg sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-white text-brand-dark flex items-center justify-center display-font text-xl">.14</div>
+        <div>
+          <h1 class="display-font text-2xl leading-none">Panel de Servicio</h1>
+          <p class="text-xs text-gray-300 -mt-0.5">Cola de pedidos en tiempo real</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="connection-pill"
+              class="hidden sm:inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full bg-gray-700">
+          <span id="connection-dot" class="w-2 h-2 rounded-full bg-yellow-400"></span>
+          <span id="connection-text">iniciando…</span>
+        </span>
+        <label class="inline-flex items-center gap-2 text-sm cursor-pointer select-none">
+          <input id="sound-toggle" type="checkbox" checked class="accent-brand-red" />
+          <span class="hidden sm:inline">Sonido</span>
+        </label>
+        <button id="hide-finished"
+                class="text-xs sm:text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-full">
+          <span id="hide-finished-label">Ocultar finalizados</span>
+        </button>
+        <button id="clear-all"
+                title="Borrar todos los pedidos"
+                class="text-xs sm:text-sm bg-brand-red/80 hover:bg-brand-red px-3 py-1.5 rounded-full">
+          Vaciar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats / column headers -->
+  <section class="max-w-7xl mx-auto px-4 mt-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Recibidos</p>
+          <p class="display-font text-3xl text-blue-600" id="count-recibido">0</p>
+        </div>
+        <span class="text-2xl">🛎️</span>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-amber-500 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">En preparación</p>
+          <p class="display-font text-3xl text-amber-600" id="count-en_preparacion">0</p>
+        </div>
+        <span class="text-2xl">👨‍🍳</span>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Listos para servir</p>
+          <p class="display-font text-3xl text-green-600" id="count-listo">0</p>
+        </div>
+        <span class="text-2xl">✅</span>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-gray-400 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Finalizados</p>
+          <p class="display-font text-3xl text-gray-500" id="count-finalizado">0</p>
+        </div>
+        <span class="text-2xl">📦</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kanban board -->
+  <main class="max-w-7xl mx-auto px-4 pb-12">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <!-- Columns will be injected here -->
+      <div data-column="recibido" class="bg-blue-50 rounded-2xl p-3 flex flex-col min-h-[300px]">
+        <header class="flex items-center justify-between mb-3 px-2">
+          <h2 class="display-font text-2xl text-blue-700 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-500"></span> Recibidos
+          </h2>
+          <span class="bg-blue-200 text-blue-900 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
+        </header>
+        <div class="space-y-3 flex-1" data-list></div>
+        <p data-empty class="text-center text-blue-400 text-sm py-8">Sin pedidos nuevos</p>
+      </div>
+
+      <div data-column="en_preparacion" class="bg-amber-50 rounded-2xl p-3 flex flex-col min-h-[300px]">
+        <header class="flex items-center justify-between mb-3 px-2">
+          <h2 class="display-font text-2xl text-amber-700 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500"></span> En preparación
+          </h2>
+          <span class="bg-amber-200 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
+        </header>
+        <div class="space-y-3 flex-1" data-list></div>
+        <p data-empty class="text-center text-amber-400 text-sm py-8">Sin pedidos en cocina</p>
+      </div>
+
+      <div data-column="listo" class="bg-green-50 rounded-2xl p-3 flex flex-col min-h-[300px]">
+        <header class="flex items-center justify-between mb-3 px-2">
+          <h2 class="display-font text-2xl text-green-700 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-green-500"></span> Listos para servir
+          </h2>
+          <span class="bg-green-200 text-green-900 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
+        </header>
+        <div class="space-y-3 flex-1" data-list></div>
+        <p data-empty class="text-center text-green-400 text-sm py-8">Nada listo aún</p>
+      </div>
+
+      <div data-column="finalizado" class="bg-gray-100 rounded-2xl p-3 flex flex-col min-h-[300px]" id="finished-col">
+        <header class="flex items-center justify-between mb-3 px-2">
+          <h2 class="display-font text-2xl text-gray-600 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-gray-500"></span> Finalizados
+          </h2>
+          <span class="bg-gray-300 text-gray-800 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
+        </header>
+        <div class="space-y-3 flex-1" data-list></div>
+        <p data-empty class="text-center text-gray-400 text-sm py-8">Sin pedidos finalizados</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="orders-store.js"></script>
+  <script>
+  (function () {
+    const STATES = ['recibido', 'en_preparacion', 'listo', 'finalizado'];
+    const STATE_LABEL = {
+      recibido:       'Recibido',
+      en_preparacion: 'En preparación',
+      listo:          'Listo',
+      finalizado:     'Finalizado',
+    };
+    const NEXT_LABEL = {
+      recibido:       { next: 'en_preparacion', label: 'Empezar a preparar' },
+      en_preparacion: { next: 'listo',          label: 'Marcar como listo' },
+      listo:          { next: 'finalizado',     label: 'Entregado / Finalizado' },
+    };
+    const PREV_LABEL = {
+      en_preparacion: { prev: 'recibido',       label: 'Volver' },
+      listo:          { prev: 'en_preparacion', label: 'Volver a cocina' },
+      finalizado:     { prev: 'listo',          label: 'Reabrir' },
+    };
+
+    const ordersById = new Map();
+    let hideFinished = false;
+
+    const formatEuro = (n) => '€' + (Math.round(n * 100) / 100).toFixed(2);
+    const formatTime = (ms) => {
+      const d = new Date(ms);
+      return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    function elapsedLabel(ms) {
+      const sec = Math.floor((Date.now() - ms) / 1000);
+      if (sec < 60)  return `${sec}s`;
+      const min = Math.floor(sec / 60);
+      if (min < 60)  return `${min} min`;
+      const hr = Math.floor(min / 60);
+      return `${hr}h ${min % 60}m`;
+    }
+
+    function elapsedColor(ms, status) {
+      if (status === 'finalizado') return 'text-gray-400';
+      const min = (Date.now() - ms) / 60000;
+      if (min < 5)  return 'text-gray-500';
+      if (min < 10) return 'text-amber-600 font-semibold';
+      return 'text-red-600 font-bold';
+    }
+
+    function renderOrderCard(order) {
+      const wrapper = document.createElement('article');
+      wrapper.dataset.orderId = order.id;
+      wrapper.className = 'bg-white rounded-xl shadow border border-gray-200 overflow-hidden pop-in';
+
+      const next = NEXT_LABEL[order.status];
+      const prev = PREV_LABEL[order.status];
+      const isNew = order.status === 'recibido' && (Date.now() - order.createdAt < 8000);
+      if (isNew) wrapper.classList.add('new-order');
+
+      const itemsHtml = order.items.map(it => `
+        <li class="flex items-baseline gap-2 text-sm py-1">
+          <span class="display-font text-base text-brand-red shrink-0 w-7 text-right">${it.quantity}×</span>
+          <div class="flex-1">
+            <span class="text-gray-900">${escapeHtml(it.name)}</span>
+            ${it.variant ? `<span class="text-xs text-gray-500 block">${escapeHtml(it.variant)}</span>` : ''}
+          </div>
+          <span class="text-xs text-gray-500 tabular-nums">${formatEuro(it.price * it.quantity)}</span>
+        </li>
+      `).join('');
+
+      wrapper.innerHTML = `
+        <div class="px-4 py-3 border-b flex items-center justify-between gap-2 bg-gradient-to-r from-white to-gray-50">
+          <div class="flex items-center gap-2">
+            <span class="display-font text-3xl text-brand-dark leading-none">#${order.code}</span>
+            ${order.table ? `<span class="bg-brand-dark text-white text-xs font-semibold px-2 py-0.5 rounded">${escapeHtml(order.table)}</span>` : ''}
+          </div>
+          <div class="text-right text-xs">
+            <p class="text-gray-500">${formatTime(order.createdAt)}</p>
+            <p class="${elapsedColor(order.createdAt, order.status)} elapsed">hace ${elapsedLabel(order.createdAt)}</p>
+          </div>
+        </div>
+        <ul class="px-4 py-2 divide-y">${itemsHtml}</ul>
+        ${order.notes ? `
+          <div class="mx-4 mb-3 p-2 bg-yellow-50 border-l-4 border-yellow-400 rounded text-sm">
+            <p class="font-semibold text-yellow-800 text-xs uppercase tracking-wide">Notas</p>
+            <p class="text-yellow-900">${escapeHtml(order.notes)}</p>
+          </div>
+        ` : ''}
+        <div class="px-4 py-2 flex items-center justify-between border-t bg-gray-50">
+          <span class="text-sm text-gray-600">Total</span>
+          <span class="display-font text-xl text-brand-red">${formatEuro(order.total)}</span>
+        </div>
+        <div class="p-3 flex flex-wrap gap-2 border-t">
+          ${prev ? `<button data-action="prev" data-target="${prev.prev}"
+                       class="flex-1 min-w-[120px] text-xs font-semibold bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg transition">
+                       ← ${prev.label}
+                     </button>` : ''}
+          ${next ? `<button data-action="next" data-target="${next.next}"
+                       class="flex-1 min-w-[140px] text-sm font-bold bg-brand-green hover:bg-green-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                       ${next.label} →
+                     </button>` : `
+                     <button data-action="delete"
+                       class="flex-1 text-sm font-semibold bg-gray-200 hover:bg-red-500 hover:text-white text-gray-700 px-3 py-2 rounded-lg transition">
+                       Eliminar del historial
+                     </button>`}
+        </div>
+      `;
+
+      wrapper.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          if (action === 'next' || action === 'prev') {
+            updateStatus(order.id, btn.dataset.target);
+          } else if (action === 'delete') {
+            if (confirm(`¿Eliminar el pedido #${order.code} del historial?`)) {
+              deleteOrder(order.id);
+            }
+          }
+        });
+      });
+
+      return wrapper;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+    }
+
+    function render() {
+      STATES.forEach(state => {
+        const col = document.querySelector(`[data-column="${state}"]`);
+        const list = col.querySelector('[data-list]');
+        const emptyEl = col.querySelector('[data-empty]');
+        const countEl = col.querySelector('[data-count]');
+
+        list.innerHTML = '';
+        const items = Array.from(ordersById.values())
+          .filter(o => o.status === state)
+          .sort((a, b) => state === 'finalizado'
+            ? b.updatedAt - a.updatedAt
+            : a.createdAt - b.createdAt);
+
+        items.forEach(o => list.appendChild(renderOrderCard(o)));
+        countEl.textContent = items.length;
+        emptyEl.style.display = items.length === 0 ? '' : 'none';
+
+        document.getElementById(`count-${state}`).textContent = items.length;
+      });
+
+      // Apply hide-finished
+      document.getElementById('finished-col').style.display = hideFinished ? 'none' : '';
+    }
+
+    // Periodically refresh "elapsed" labels
+    setInterval(() => {
+      document.querySelectorAll('article[data-order-id]').forEach(el => {
+        const id = parseInt(el.dataset.orderId, 10);
+        const order = ordersById.get(id);
+        if (!order) return;
+        const elapsedEl = el.querySelector('.elapsed');
+        if (!elapsedEl) return;
+        elapsedEl.textContent = `hace ${elapsedLabel(order.createdAt)}`;
+        elapsedEl.className = `${elapsedColor(order.createdAt, order.status)} elapsed`;
+      });
+    }, 15000);
+
+    function setConnState(state) {
+      const dot  = document.getElementById('connection-dot');
+      const text = document.getElementById('connection-text');
+      if (state === 'ok')      { dot.className = 'w-2 h-2 rounded-full bg-green-400';  text.textContent = 'en vivo'; }
+      if (state === 'noStore') { dot.className = 'w-2 h-2 rounded-full bg-red-400';    text.textContent = 'sin almacenamiento'; }
+    }
+
+    function playBeep() {
+      if (!document.getElementById('sound-toggle').checked) return;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880;
+        g.gain.value = 0.0001;
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+        o.connect(g).connect(ctx.destination);
+        o.start();
+        o.stop(ctx.currentTime + 0.4);
+        setTimeout(() => ctx.close(), 600);
+      } catch (e) { /* ignore */ }
+    }
+
+    function syncFromStore({ playSoundOnNew = true } = {}) {
+      const fromStore = window.OrdersStore.list();
+      const previousIds = new Set(ordersById.keys());
+      const newIds = [];
+
+      ordersById.clear();
+      fromStore.forEach((o) => {
+        ordersById.set(o.id, o);
+        if (!previousIds.has(o.id)) newIds.push(o.id);
+      });
+
+      if (playSoundOnNew && newIds.length > 0) playBeep();
+      render();
+    }
+
+    function updateStatus(id, status) {
+      try {
+        window.OrdersStore.updateStatus(id, status);
+        syncFromStore({ playSoundOnNew: false });
+      } catch (e) { alert(e.message); }
+    }
+
+    function deleteOrder(id) {
+      try {
+        window.OrdersStore.remove(id);
+        syncFromStore({ playSoundOnNew: false });
+      } catch (e) { alert(e.message); }
+    }
+
+    document.getElementById('hide-finished').addEventListener('click', () => {
+      hideFinished = !hideFinished;
+      document.getElementById('hide-finished-label').textContent =
+        hideFinished ? 'Mostrar finalizados' : 'Ocultar finalizados';
+      render();
+    });
+
+    document.getElementById('clear-all').addEventListener('click', () => {
+      if (confirm('¿Borrar TODOS los pedidos? Esta acción no se puede deshacer.')) {
+        window.OrdersStore.clearAll();
+        syncFromStore({ playSoundOnNew: false });
+      }
+    });
+
+    if (!window.OrdersStore) {
+      setConnState('noStore');
+      alert('No se pudo inicializar el almacenamiento. Asegúrate de servir los archivos desde un servidor web (no abrirlos como file://).');
+      return;
+    }
+
+    setConnState('ok');
+    syncFromStore({ playSoundOnNew: false });
+    window.OrdersStore.subscribe(() => syncFromStore({ playSoundOnNew: true }));
+  })();
+  </script>
+</body>
+</html>
