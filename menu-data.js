@@ -142,4 +142,45 @@ window.MENU_DATA = {
       { id: 'plato-tortilla-ensa',    name: 'Tortilla / Ensaladilla / Tomate', price: 7.5 },
     ],
   },
+
+  bebidas: {
+    title: 'Bebidas',
+    groups: [
+      {
+        title: 'Cañas',
+        items: [
+          { id: 'beb-egal-cana',  name: 'Estrella de Galicia (caña)',  price: 1.5 },
+          { id: 'beb-egal-jarra', name: 'Estrella de Galicia (jarra)', price: 3.0 },
+          { id: 'beb-1906-copa',  name: '1906 (copa)',                 price: 2.5 },
+        ],
+      },
+      {
+        title: 'Cervezas en Botella',
+        items: [
+          { id: 'beb-dorada-sin',     name: 'Dorada Sin / Con limón',           price: 1.6 },
+          { id: 'beb-heineken',       name: 'Heineken',                         price: 1.6 },
+          { id: 'beb-egal-tostada',   name: 'Estrella de Galicia Tostada 0,0',  price: 1.9 },
+          { id: 'beb-egal-singluten', name: 'Estrella de Galicia Sin Gluten',   price: 1.6 },
+        ],
+      },
+      {
+        title: 'Vinos (por copa)',
+        items: [
+          { id: 'beb-blanco-chardonnay', name: 'Vino Blanco Chardonnay', price: 2.8 },
+          { id: 'beb-tinto-verano',      name: 'Tinto de Verano',        price: 3.9 },
+        ],
+      },
+      {
+        title: 'Copas',
+        items: [
+          { id: 'beb-gintonic',     name: 'Gin Tonic (Tanqueray)', price: 5.5 },
+          { id: 'beb-cubalibre',    name: 'Cuba Libre (Havana 7)', price: 5.5 },
+          { id: 'beb-amaro',        name: 'Amaro Montenegro',      price: 4.0 },
+          { id: 'beb-johnnie',      name: 'Johnnie Walker',        price: 4.0 },
+          { id: 'beb-chupito',      name: 'Chupito',               price: 1.9 },
+          { id: 'beb-amara-spritz', name: 'Amara Brava Spritz',    price: 4.9 },
+        ],
+      },
+    ],
+  },
 };

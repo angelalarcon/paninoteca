@@ -395,6 +395,69 @@
       items: MENU.platos.items,
     });
 
+    /** Section with multiple sub-groups (e.g. Bebidas: Cañas, Cervezas, Vinos, Copas). */
+    function renderGroupedSection({ id, title, groups }) {
+      const sec = addSection(id, title);
+      sec.innerHTML = `
+        <h2 class="display-font text-4xl text-brand-dark mb-4">${title}</h2>
+      `;
+
+      groups.forEach((group) => {
+        const block = document.createElement('div');
+        block.className = 'mb-6 last:mb-0';
+        block.innerHTML = `
+          <h3 class="display-font text-xl text-gray-700 mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-brand-red"></span>
+            ${group.title}
+          </h3>
+        `;
+        const grid = document.createElement('div');
+        grid.className = 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3';
+        block.appendChild(grid);
+
+        group.items.forEach((item) => {
+          const price = item.price;
+          const card = document.createElement('div');
+          card.className = 'bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col';
+          card.innerHTML = `
+            <p class="font-medium text-gray-900 flex-1">${item.name}</p>
+            <div class="mt-3 flex items-center justify-between">
+              <span class="display-font text-2xl text-brand-red">${formatEuro(price)}</span>
+              <div class="flex items-center border rounded-full overflow-hidden">
+                <button class="qty-minus px-3 py-1 hover:bg-gray-100 text-lg" aria-label="Quitar">−</button>
+                <span class="qty-value w-8 text-center font-semibold">0</span>
+                <button class="qty-plus px-3 py-1 hover:bg-gray-100 text-lg" aria-label="Añadir">+</button>
+              </div>
+            </div>
+          `;
+          const valueEl = card.querySelector('.qty-value');
+          const key = item.id;
+          const refreshQty = () => {
+            const entry = cart.find(c => c.key === key);
+            valueEl.textContent = entry ? entry.quantity : 0;
+          };
+          card.querySelector('.qty-plus').addEventListener('click', () => {
+            addToCart({ key, id: item.id, name: item.name, variant: null, price });
+            refreshQty();
+          });
+          card.querySelector('.qty-minus').addEventListener('click', () => {
+            decrementInCart(key);
+            refreshQty();
+          });
+          card._refresh = refreshQty;
+          grid.appendChild(card);
+        });
+
+        sec.appendChild(block);
+      });
+    }
+
+    renderGroupedSection({
+      id: 'bebidas',
+      title: MENU.bebidas.title,
+      groups: MENU.bebidas.groups,
+    });
+
     // Build category nav
     sections.forEach(s => nav.appendChild(navButton(s)));
 
