@@ -189,6 +189,54 @@
     };
     const iconFor = (fmtId) => BREAD_ICONS[fmtId] || '';
 
+    /**
+     * SVG icons for café customisation: caffeine on/off, milk type (normal vs
+     * oat), and cup sizes. Same visual language as the panini bread icons.
+     */
+    const COFFEE_OPT_ICONS = {
+      caffeine_on: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <ellipse cx="12" cy="12" rx="5" ry="8" transform="rotate(-25 12 12)" fill="#6b3a14" stroke="#3a2410" stroke-width="1"/>
+          <path d="M9 5 Q12 12 15 19" stroke="#3a2410" stroke-width="1" fill="none" stroke-linecap="round"/>
+        </svg>`,
+      caffeine_off: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <ellipse cx="12" cy="12" rx="5" ry="8" transform="rotate(-25 12 12)" fill="#cbb29a" stroke="#5e3a1d" stroke-width="1"/>
+          <path d="M9 5 Q12 12 15 19" stroke="#5e3a1d" stroke-width="1" fill="none" stroke-linecap="round"/>
+          <line x1="4" y1="20" x2="20" y2="4" stroke="#d8232a" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>`,
+      milk_normal: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#ffffff" stroke="#5e7eb6" stroke-width="1.2"/>
+        </svg>`,
+      milk_avena: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#e8d09b" stroke="#a8753a" stroke-width="1.2"/>
+          <ellipse cx="10.5" cy="13" rx="0.7" ry="1.4" fill="#a8753a"/>
+          <ellipse cx="12"   cy="15" rx="0.7" ry="1.4" fill="#a8753a"/>
+          <ellipse cx="13.5" cy="13" rx="0.7" ry="1.4" fill="#a8753a"/>
+        </svg>`,
+      size_normal: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M9 11 L9.5 19 Q9.5 20 10.5 20 L13.5 20 Q14.5 20 14.5 19 L15 11 Z" fill="#fff8eb" stroke="#3a2410" stroke-width="1.2"/>
+          <path d="M15 13 Q17 13 17 15.5 Q17 17.5 15 17.5" fill="none" stroke="#3a2410" stroke-width="1.2"/>
+          <ellipse cx="12" cy="11" rx="3" ry="0.6" fill="#6b3a14"/>
+        </svg>`,
+      size_obrero: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M7 8 L7.5 19 Q7.5 20 8.5 20 L15.5 20 Q16.5 20 16.5 19 L17 8 Z" fill="#fff8eb" stroke="#3a2410" stroke-width="1.2"/>
+          <path d="M17 11 Q19 11 19 14 Q19 17 17 17" fill="none" stroke="#3a2410" stroke-width="1.2"/>
+          <ellipse cx="12" cy="8" rx="4.6" ry="0.7" fill="#6b3a14"/>
+        </svg>`,
+      size_xxl: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M5 5 L6 19 Q6 20 7 20 L17 20 Q18 20 18 19 L19 5 Z" fill="#fff8eb" stroke="#3a2410" stroke-width="1.2"/>
+          <path d="M19 9 Q21 9 21 13 Q21 17 19 17" fill="none" stroke="#3a2410" stroke-width="1.2"/>
+          <ellipse cx="12" cy="5" rx="6.6" ry="0.8" fill="#6b3a14"/>
+        </svg>`,
+    };
+    const coffeeIconFor = (key) => COFFEE_OPT_ICONS[key] || '';
+
     // ---------- Render menu ----------
     const container = document.getElementById('menu-container');
     const nav = document.getElementById('category-nav');
@@ -395,6 +443,200 @@
       items: MENU.platos.items,
     });
 
+    /**
+     * Render a customisable café card. The item may declare any combination of:
+     *   - `sizes`            → array of {id, label, price, icon}
+     *   - `avenaSurcharge`   → number (extra € when oat milk selected)
+     *   - `decafSurcharge`   → number (extra € when decaf selected)
+     *
+     * Each option group renders as an icon toggle, like the panini bread
+     * selector. The cart key is composed of the item id + selected variants so
+     * a "Café con Leche XXL · Avena · Desc." is a different cart line than a
+     * plain "Café con Leche".
+     */
+    function renderCafeItem(item) {
+      const card = document.createElement('div');
+      card.className = 'bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col';
+
+      const hasSize  = Array.isArray(item.sizes) && item.sizes.length > 0;
+      const hasMilk  = typeof item.avenaSurcharge === 'number';
+      const hasDecaf = typeof item.decafSurcharge === 'number';
+      const hasOpts  = hasSize || hasMilk || hasDecaf;
+
+      let selSize   = hasSize ? item.sizes[0].id : null;
+      let useAvena  = false;
+      let useDecaf  = false;
+
+      const basePrice = () => {
+        if (hasSize) {
+          const s = item.sizes.find(s => s.id === selSize) || item.sizes[0];
+          return s.price;
+        }
+        return item.price;
+      };
+      const totalPrice = () =>
+        basePrice()
+        + (useAvena ? (item.avenaSurcharge || 0) : 0)
+        + (useDecaf ? (item.decafSurcharge || 0) : 0);
+
+      const getKey = () => [
+        item.id,
+        hasSize  ? `s:${selSize}`             : '',
+        hasMilk  ? (useAvena ? 'avena' : '')  : '',
+        hasDecaf ? (useDecaf ? 'desc'  : '')  : '',
+      ].filter(Boolean).join('|');
+
+      const variantLabel = () => {
+        const parts = [];
+        if (hasSize) {
+          const s = item.sizes.find(s => s.id === selSize);
+          if (s) parts.push(s.label);
+        }
+        parts.push(useAvena ? 'Leche de avena' : (hasMilk ? 'Leche normal' : null));
+        parts.push(useDecaf ? 'Descafeinado'    : (hasDecaf ? 'Con cafeína' : null));
+        return parts.filter(Boolean).join(' · ');
+      };
+
+      const optBtnBase =
+        'cafe-opt-btn flex items-center justify-center px-1.5 py-1 rounded-lg transition';
+      const optBtnSel  = 'bg-white shadow ring-2 ring-brand-red';
+      const optBtnIdle = 'opacity-60 hover:opacity-100 hover:bg-white';
+
+      const sizeHtml = hasSize ? `
+        <div class="cafe-opt-group inline-flex items-center bg-gray-50 border rounded-xl p-0.5"
+             role="radiogroup" aria-label="Tamaño" data-opt="size">
+          ${item.sizes.map((s, idx) => `
+            <button type="button"
+                    role="radio"
+                    data-value="${s.id}"
+                    aria-checked="${idx === 0 ? 'true' : 'false'}"
+                    aria-label="${s.label} — ${formatEuro(s.price)}"
+                    title="${s.label} — ${formatEuro(s.price)}"
+                    class="${optBtnBase} ${idx === 0 ? optBtnSel : optBtnIdle}">
+              ${coffeeIconFor(s.icon || 'size_normal')}
+            </button>
+          `).join('')}
+        </div>` : '';
+
+      const avenaExtra = item.avenaSurcharge
+        ? ` (+${formatEuro(item.avenaSurcharge)})`
+        : '';
+      const milkHtml = hasMilk ? `
+        <div class="cafe-opt-group inline-flex items-center bg-gray-50 border rounded-xl p-0.5"
+             role="radiogroup" aria-label="Tipo de leche" data-opt="milk">
+          <button type="button" role="radio" data-value="normal"
+                  aria-checked="true"
+                  aria-label="Leche normal" title="Leche normal"
+                  class="${optBtnBase} ${optBtnSel}">
+            ${coffeeIconFor('milk_normal')}
+          </button>
+          <button type="button" role="radio" data-value="avena"
+                  aria-checked="false"
+                  aria-label="Leche de avena${avenaExtra}"
+                  title="Leche de avena${avenaExtra}"
+                  class="${optBtnBase} ${optBtnIdle}">
+            ${coffeeIconFor('milk_avena')}
+          </button>
+        </div>` : '';
+
+      const decafExtra = item.decafSurcharge
+        ? ` (+${formatEuro(item.decafSurcharge)})`
+        : '';
+      const decafHtml = hasDecaf ? `
+        <div class="cafe-opt-group inline-flex items-center bg-gray-50 border rounded-xl p-0.5"
+             role="radiogroup" aria-label="Cafeína" data-opt="decaf">
+          <button type="button" role="radio" data-value="no"
+                  aria-checked="true"
+                  aria-label="Con cafeína" title="Con cafeína"
+                  class="${optBtnBase} ${optBtnSel}">
+            ${coffeeIconFor('caffeine_on')}
+          </button>
+          <button type="button" role="radio" data-value="yes"
+                  aria-checked="false"
+                  aria-label="Descafeinado${decafExtra}"
+                  title="Descafeinado${decafExtra}"
+                  class="${optBtnBase} ${optBtnIdle}">
+            ${coffeeIconFor('caffeine_off')}
+          </button>
+        </div>` : '';
+
+      card.innerHTML = `
+        <p class="font-medium text-gray-900">${item.name}</p>
+        ${hasOpts ? `
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            ${sizeHtml}${milkHtml}${decafHtml}
+          </div>
+          <p class="cafe-variant-label text-xs text-gray-500 mt-2 leading-tight"></p>
+        ` : ''}
+        <div class="mt-3 flex items-center justify-between">
+          <span class="cafe-price display-font text-2xl text-brand-red">${formatEuro(totalPrice())}</span>
+          <div class="flex items-center border rounded-full overflow-hidden">
+            <button class="qty-minus px-3 py-1 hover:bg-gray-100 text-lg" aria-label="Quitar">−</button>
+            <span class="qty-value w-8 text-center font-semibold">0</span>
+            <button class="qty-plus px-3 py-1 hover:bg-gray-100 text-lg" aria-label="Añadir">+</button>
+          </div>
+        </div>
+      `;
+
+      const priceEl   = card.querySelector('.cafe-price');
+      const variantEl = card.querySelector('.cafe-variant-label');
+      const valueEl   = card.querySelector('.qty-value');
+
+      const refreshUI = () => {
+        priceEl.textContent = formatEuro(totalPrice());
+        if (variantEl) variantEl.textContent = variantLabel();
+        const entry = cart.find(c => c.key === getKey());
+        valueEl.textContent = entry ? entry.quantity : 0;
+      };
+
+      const paintSelection = (groupEl, value) => {
+        groupEl.querySelectorAll('.cafe-opt-btn').forEach((b) => {
+          const sel = b.dataset.value === value;
+          b.setAttribute('aria-checked', sel ? 'true' : 'false');
+          b.classList.toggle('bg-white',          sel);
+          b.classList.toggle('shadow',            sel);
+          b.classList.toggle('ring-2',            sel);
+          b.classList.toggle('ring-brand-red',    sel);
+          b.classList.toggle('opacity-60',        !sel);
+          b.classList.toggle('hover:opacity-100', !sel);
+          b.classList.toggle('hover:bg-white',    !sel);
+        });
+      };
+
+      card.querySelectorAll('.cafe-opt-group').forEach((groupEl) => {
+        const optName = groupEl.dataset.opt;
+        groupEl.querySelectorAll('.cafe-opt-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const v = btn.dataset.value;
+            if (optName === 'size')  selSize  = v;
+            if (optName === 'milk')  useAvena = v === 'avena';
+            if (optName === 'decaf') useDecaf = v === 'yes';
+            paintSelection(groupEl, v);
+            refreshUI();
+          });
+        });
+      });
+
+      card.querySelector('.qty-plus').addEventListener('click', () => {
+        addToCart({
+          key: getKey(),
+          id: item.id,
+          name: item.name,
+          variant: hasOpts ? variantLabel() : null,
+          price: totalPrice(),
+        });
+        refreshUI();
+      });
+      card.querySelector('.qty-minus').addEventListener('click', () => {
+        decrementInCart(getKey());
+        refreshUI();
+      });
+
+      card._refresh = refreshUI;
+      refreshUI();
+      return card;
+    }
+
     /** Section with multiple sub-groups (e.g. Bebidas: Cañas, Cervezas, Vinos, Copas). */
     function renderGroupedSection({ id, title, groups }) {
       const sec = addSection(id, title);
@@ -416,6 +658,16 @@
         block.appendChild(grid);
 
         group.items.forEach((item) => {
+          const hasOptions =
+            Array.isArray(item.sizes) ||
+            typeof item.avenaSurcharge === 'number' ||
+            typeof item.decafSurcharge === 'number';
+
+          if (hasOptions) {
+            grid.appendChild(renderCafeItem(item));
+            return;
+          }
+
           const price = item.price;
           const card = document.createElement('div');
           card.className = 'bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col';

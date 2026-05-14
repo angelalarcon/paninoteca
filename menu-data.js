@@ -5,8 +5,13 @@
  * - Los PANINI tienen un código (01, 31, 60, etc.) y se pueden pedir en
  *   distintos formatos (Bocadillo, 1/2 Bocadillo, Pulguita Integral o
  *   Barra Entera) que determinan el precio.
- * - El resto de secciones (Montaditos, Sandwich/Toast, Platos, Cafés,
- *   Bebidas) tienen un precio fijo por unidad.
+ * - Los CAFÉS pueden definir opciones adicionales en el propio item:
+ *     • `sizes`            → variantes de tamaño con su precio.
+ *     • `avenaSurcharge`   → extra al cambiar la leche normal por avena.
+ *     • `decafSurcharge`   → extra al pedirlo descafeinado.
+ *   Si un café no declara una opción, ese toggle no se muestra.
+ * - El resto de secciones (Montaditos, Sandwich/Toast, Platos, Bebidas)
+ *   tienen un precio fijo por unidad.
  */
 
 window.MENU_DATA = {
@@ -206,53 +211,42 @@ window.MENU_DATA = {
     groups: [
       {
         title: 'Cafés',
+        // Cada café declara sus opciones aplicables:
+        //   - `decafSurcharge`: extra al pedirlo descafeinado (en €). Si está
+        //     presente, se muestra el toggle de cafeína.
+        //   - `avenaSurcharge`: extra al cambiar a leche de avena. Si está
+        //     presente, se muestra el toggle de tipo de leche.
+        //   - `sizes`: variantes de tamaño con su precio. Si está presente,
+        //     el precio base se determina por el tamaño seleccionado.
         items: [
-          { id: 'cafe-cafe',               name: 'Café',                            price: 1.0 },
-          { id: 'cafe-espresso',           name: 'Espresso',                        price: 1.0 },
-          { id: 'cafe-macchiato',          name: 'Café Macchiato',                  price: 1.1 },
-          { id: 'cafe-cortado-natural',    name: 'Cortado Natural',                 price: 1.0 },
-          { id: 'cafe-cortado-leche',      name: 'Cortado Leche / Leche',           price: 1.1 },
-          { id: 'cafe-bonbon',             name: 'Bon Bon',                         price: 1.1 },
-          { id: 'cafe-cortado-largo',      name: 'Cortado Natural Largo',           price: 1.2 },
-          { id: 'cafe-bonbon-largo',       name: 'Bon Bon Largo',                   price: 1.2 },
-          { id: 'cafe-americano',          name: 'Americano',                       price: 1.2 },
-          { id: 'cafe-americano-cond',     name: 'Americano con Condensada',        price: 1.3 },
-          { id: 'cafe-barraquito',         name: 'Barraquito',                      price: 1.3 },
-          { id: 'cafe-con-leche',          name: 'Café con Leche',                  price: 1.3 },
-          { id: 'cafe-cappuccino',         name: 'Cappuccino',                      price: 1.3 },
-          { id: 'cafe-vaso-obrero',        name: 'Café con Leche "Vaso Obrero"',    price: 1.5 },
-          { id: 'cafe-xxl',                name: 'Café con Leche XXL',              price: 1.9 },
+          { id: 'cafe-cafe',            name: 'Café',                       price: 1.0, decafSurcharge: 0.10 },
+          { id: 'cafe-espresso',        name: 'Espresso',                   price: 1.0, decafSurcharge: 0.10 },
+          { id: 'cafe-macchiato',       name: 'Café Macchiato',             price: 1.1, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-cortado-natural', name: 'Cortado Natural',            price: 1.0, decafSurcharge: 0.20, avenaSurcharge: 0.20 },
+          { id: 'cafe-cortado-leche',   name: 'Cortado Leche / Leche',      price: 1.1, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-bonbon',          name: 'Bon Bon',                    price: 1.1, decafSurcharge: 0.10 },
+          { id: 'cafe-cortado-largo',   name: 'Cortado Natural Largo',      price: 1.2, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-bonbon-largo',    name: 'Bon Bon Largo',              price: 1.2, decafSurcharge: 0.10 },
+          { id: 'cafe-americano',       name: 'Americano',                  price: 1.2, decafSurcharge: 0.20 },
+          { id: 'cafe-americano-cond',  name: 'Americano con Condensada',   price: 1.3, decafSurcharge: 0.20 },
+          { id: 'cafe-barraquito',      name: 'Barraquito',                 price: 1.3, decafSurcharge: 0.00, avenaSurcharge: 0.10 },
+          {
+            id: 'cafe-con-leche',
+            name: 'Café con Leche',
+            decafSurcharge: 0.10,
+            avenaSurcharge: 0.10,
+            // El precio base depende del tamaño elegido.
+            sizes: [
+              { id: 'normal', label: 'Normal',      price: 1.3, icon: 'size_normal' },
+              { id: 'obrero', label: 'Vaso Obrero', price: 1.5, icon: 'size_obrero' },
+              { id: 'xxl',    label: 'XXL',         price: 1.9, icon: 'size_xxl' },
+            ],
+          },
+          { id: 'cafe-cappuccino',         name: 'Cappuccino',                      price: 1.3, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
           { id: 'cafe-hot-ciok',           name: 'Café con Leche "Hot Ciok"',       price: 2.5 },
           { id: 'cafe-barraq-especial',    name: 'Barraquito Especial (liq. 43)',   price: 1.9 },
           { id: 'cafe-sambuca',            name: 'Café con Sambuca',                price: 1.2 },
           { id: 'cafe-chocolate-hot-ciok', name: 'Chocolate "Hot Ciok"',            price: 1.8 },
-        ],
-      },
-      {
-        title: 'Descafeinado',
-        items: [
-          { id: 'desc-cafe',            name: 'Café Desc.',                  price: 1.1 },
-          { id: 'desc-cortado-natural', name: 'Cortado Natural Desc.',       price: 1.2 },
-          { id: 'desc-cortado-leche',   name: 'Cortado Leche / Leche Desc.', price: 1.2 },
-          { id: 'desc-bonbon',          name: 'Bon Bon Desc.',               price: 1.2 },
-          { id: 'desc-cortado-largo',   name: 'Cortado Natural Largo Desc.', price: 1.3 },
-          { id: 'desc-bonbon-largo',    name: 'Bon Bon Largo Desc.',         price: 1.3 },
-          { id: 'desc-barraquito',      name: 'Barraquito Desc.',            price: 1.3 },
-          { id: 'desc-cafe-leche',      name: 'Café con Leche Desc.',        price: 1.4 },
-          { id: 'desc-cappuccino',      name: 'Cappuccino Desc.',            price: 1.4 },
-          { id: 'desc-americano',       name: 'Americano Desc.',             price: 1.4 },
-          { id: 'desc-cortado-leche-s', name: 'Cortado Leche Desc.',         price: 1.3 },
-        ],
-      },
-      {
-        title: 'Sin Lactosa / Avena',
-        items: [
-          { id: 'sl-cortado-natural', name: 'Cortado Natural',       price: 1.2 },
-          { id: 'sl-cortado-leche',   name: 'Cortado Leche / Leche', price: 1.2 },
-          { id: 'sl-cortado-largo',   name: 'Cortado Natural Largo', price: 1.3 },
-          { id: 'sl-barraquito',      name: 'Barraquito',            price: 1.4 },
-          { id: 'sl-cafe-leche',      name: 'Café con Leche',        price: 1.4 },
-          { id: 'sl-cappuccino',      name: 'Cappuccino',            price: 1.4 },
         ],
       },
       {
