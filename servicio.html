@@ -39,6 +39,24 @@
       100% { box-shadow: 0 0 0 0 rgba(216, 35, 42, 0); }
     }
     .new-order { animation: pulse-ring 1.5s 2; }
+
+    /* --- Modo impresión: ocultar UI y dejar visible solo el ticket Verifactu --- */
+    @media print {
+      body * { visibility: hidden !important; }
+      #ticket-printable, #ticket-printable * { visibility: visible !important; }
+      #ticket-printable {
+        position: absolute !important;
+        left: 0; top: 0; right: 0;
+        margin: 0 auto;
+        padding: 8mm;
+        width: 80mm;             /* impresora térmica estándar; A4 también funciona */
+        box-shadow: none !important;
+        background: white !important;
+      }
+      #ticket-modal { background: white !important; }
+      .no-print { display: none !important; }
+      @page { margin: 6mm; }
+    }
   </style>
 </head>
 <body class="bg-gray-100 text-brand-dark min-h-screen">
@@ -159,6 +177,31 @@
     </div>
   </main>
 
+  <!-- Modal: ticket Verifactu (impresión + visualización) -->
+  <div id="ticket-modal"
+       class="fixed inset-0 z-50 bg-black/60 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full my-8 flex flex-col max-h-[95vh]">
+      <div class="no-print flex items-center justify-between gap-2 px-5 py-3 border-b">
+        <h3 class="display-font text-2xl text-brand-dark">Ticket Verifactu</h3>
+        <div class="flex items-center gap-2">
+          <button id="ticket-print"
+                  class="bg-brand-green hover:bg-green-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg">
+            Imprimir
+          </button>
+          <button id="ticket-close" class="p-2 hover:bg-gray-100 rounded-full" aria-label="Cerrar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="ticket-printable" class="overflow-y-auto p-5 text-sm">
+        <!-- Contenido del ticket inyectado dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <script src="paninoteca-config.js"></script>
   <script src="orders-store.js"></script>
   <script>
   (function () {
@@ -183,11 +226,51 @@
     const ordersById = new Map();
     let hideFinished = false;
 
+    /** Configuración fiscal (datos emisor + serie + IVA). Si falta, no podemos emitir. */
+    const CFG = window.PANINOTECA_CONFIG || null;
+
     const formatEuro = (n) => '€' + (Math.round(n * 100) / 100).toFixed(2);
     const formatTime = (ms) => {
       const d = new Date(ms);
       return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     };
+    const formatDate = (ms) => {
+      const d = new Date(ms);
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    /** Calcula el desglose de IVA de un pedido para mostrar en el ticket.
+     *  Asume precios PVP (IVA incluido) y devuelve líneas agrupadas por tipo. */
+    function computeIvaBreakdown(order) {
+      const ivaDefault  = CFG ? CFG.ivaDefault  : 10;
+      const ivaByItemId = CFG ? CFG.ivaByItemId : {};
+      const groups = new Map();
+      for (const it of order.items || []) {
+        const rate     = ivaByItemId[it.id] != null ? Number(ivaByItemId[it.id]) : Number(ivaDefault);
+        const totalPVP = (Number(it.price) || 0) * (Number(it.quantity) || 0);
+        const base     = totalPVP / (1 + rate / 100);
+        const cuota    = totalPVP - base;
+        const acc = groups.get(rate) || { base: 0, cuota: 0 };
+        acc.base  += base;
+        acc.cuota += cuota;
+        groups.set(rate, acc);
+      }
+      const breakdown = [];
+      let totalBase = 0, totalCuota = 0;
+      for (const [rate, { base, cuota }] of groups) {
+        const b = Math.round(base * 100) / 100;
+        const c = Math.round(cuota * 100) / 100;
+        breakdown.push({ rate, base: b, cuota: c });
+        totalBase  += b;
+        totalCuota += c;
+      }
+      return {
+        breakdown,
+        totalBase:  Math.round(totalBase  * 100) / 100,
+        totalCuota: Math.round(totalCuota * 100) / 100,
+        total:      Math.round((totalBase + totalCuota) * 100) / 100,
+      };
+    }
 
     function elapsedLabel(ms) {
       const sec = Math.floor((Date.now() - ms) / 1000);
@@ -227,11 +310,51 @@
         </li>
       `).join('');
 
+      const invoiceStatus = order.invoiceStatus || 'none';
+      const invoiceBadge = (() => {
+        if (invoiceStatus === 'emitida' && order.invoice) {
+          return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-green-100 text-green-800" title="Registrada en Verifactu">
+                    ✓ ${escapeHtml(order.invoice.serie)}/${escapeHtml(String(order.invoice.numero))}
+                  </span>`;
+        }
+        if (invoiceStatus === 'emitiendo') {
+          return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">⏳ emitiendo…</span>`;
+        }
+        if (invoiceStatus === 'error') {
+          return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800" title="${escapeHtml(order.invoiceError || '')}">⚠ error Verifactu</span>`;
+        }
+        return '';
+      })();
+
+      const invoiceButton = (() => {
+        if (invoiceStatus === 'emitida') {
+          return `<button data-action="ticket-view"
+                    class="flex-1 min-w-[140px] text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border">
+                    🧾 Ver / Imprimir ticket
+                  </button>`;
+        }
+        if (invoiceStatus === 'emitiendo') {
+          return `<button disabled
+                    class="flex-1 min-w-[140px] text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-2 rounded-lg cursor-wait">
+                    Emitiendo…
+                  </button>`;
+        }
+        const label = invoiceStatus === 'error' ? 'Reintentar emisión' : 'Emitir ticket Verifactu';
+        const cls   = invoiceStatus === 'error'
+          ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
+          : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200';
+        return `<button data-action="ticket-emit"
+                  class="flex-1 min-w-[140px] text-xs font-semibold ${cls} px-3 py-2 rounded-lg transition border">
+                  🧾 ${label}
+                </button>`;
+      })();
+
       wrapper.innerHTML = `
         <div class="px-4 py-3 border-b flex items-center justify-between gap-2 bg-gradient-to-r from-white to-gray-50">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="display-font text-3xl text-brand-dark leading-none">#${order.code}</span>
             ${order.table ? `<span class="bg-brand-dark text-white text-xs font-semibold px-2 py-0.5 rounded">${escapeHtml(order.table)}</span>` : ''}
+            ${invoiceBadge}
           </div>
           <div class="text-right text-xs">
             <p class="text-gray-500">${formatTime(order.createdAt)}</p>
@@ -263,6 +386,9 @@
                        Eliminar del historial
                      </button>`}
         </div>
+        <div class="px-3 pb-3 flex flex-wrap gap-2">
+          ${invoiceButton}
+        </div>
       `;
 
       wrapper.querySelectorAll('button[data-action]').forEach(btn => {
@@ -274,6 +400,11 @@
             if (confirm(`¿Eliminar el pedido #${order.code} del historial?`)) {
               deleteOrder(order.id);
             }
+          } else if (action === 'ticket-emit') {
+            emitInvoice(order.id);
+          } else if (action === 'ticket-view') {
+            const fresh = window.OrdersStore.get(order.id);
+            if (fresh) openTicketModal(fresh);
           }
         });
       });
@@ -378,6 +509,204 @@
         syncFromStore({ playSoundOnNew: false });
       } catch (e) { alert(e.message); }
     }
+
+    /** ---------- Emisión de ticket Verifactu ---------- */
+
+    async function emitInvoice(orderId) {
+      if (!CFG) {
+        alert('Falta paninoteca-config.js — no se puede emitir el ticket.');
+        return;
+      }
+      const order = window.OrdersStore.get(orderId);
+      if (!order) return;
+      if (order.invoiceStatus === 'emitida') {
+        openTicketModal(order); return;
+      }
+
+      const numero = window.OrdersStore.nextInvoiceNumber();
+      const serie  = CFG.serieFactura;
+      window.OrdersStore.markInvoiceEmitting(orderId, { numero, serie });
+      syncFromStore({ playSoundOnNew: false });
+
+      let res, body;
+      try {
+        res = await fetch(CFG.apiEndpoint, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order,
+            invoiceNumber: numero,
+            serie,
+            ivaDefault:  CFG.ivaDefault,
+            ivaByItemId: CFG.ivaByItemId || {},
+          }),
+        });
+      } catch (e) {
+        // 'Failed to fetch' / 'NetworkError': el endpoint no es alcanzable.
+        // Causa típica: estás sirviendo los HTML estáticos (file://, python -m
+        // http.server) pero /api/ no se ejecuta como Vercel Function.
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const isFileProtocol = location.protocol === 'file:';
+        const hint = isFileProtocol
+          ? 'Estás abriendo la página con file:// — ábrela desde un servidor (netlify dev).'
+          : `El endpoint ${CFG.apiEndpoint} no responde. Si estás en local, arranca "netlify dev" en lugar de "python -m http.server".`;
+        const fullMsg = `Failed to fetch: ${e.message}\n\n${hint}`;
+        window.OrdersStore.setInvoiceError(orderId, fullMsg);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`No se pudo emitir el ticket.\n\n${hint}\n\n(Detalle: ${e.message})`);
+        return;
+      }
+
+      try {
+        body = await res.json();
+      } catch (e) {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const text = await res.clone().text().catch(() => '');
+        const looksLikeHtml = /^\s*<(!DOCTYPE|html)/i.test(text);
+        const hint = looksLikeHtml
+          ? `El servidor devolvió HTML en lugar de JSON (HTTP ${res.status}). Probablemente /api/ no está activo. Usa "netlify dev" en local.`
+          : `Respuesta no JSON del servidor (HTTP ${res.status}).`;
+        window.OrdersStore.setInvoiceError(orderId, hint);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`No se pudo emitir el ticket.\n\n${hint}`);
+        return;
+      }
+
+      if (!res.ok || !body || !body.ok) {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const msg = (body && (body.error || (body.verifacti && JSON.stringify(body.verifacti)))) ||
+                    `HTTP ${res.status}`;
+        window.OrdersStore.setInvoiceError(orderId, msg);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`Verifactu rechazó la emisión:\n\n${msg}`);
+        return;
+      }
+
+      const v = body.verifacti || {};
+      const updated = window.OrdersStore.setInvoice(orderId, {
+        uuid:   v.uuid   || v.id    || null,
+        qr:     v.qr     || v.qr_base64 || v.image || null,
+        huella: v.huella || v.hash  || null,
+        numero,
+        serie,
+        fecha:  body.payload && body.payload.fecha_expedicion,
+        env:    body.env,
+      });
+      syncFromStore({ playSoundOnNew: false });
+      openTicketModal(updated);
+    }
+
+    function openTicketModal(order) {
+      if (!order.invoice) return;
+      const inv = order.invoice;
+      const { breakdown, totalBase, totalCuota, total } = computeIvaBreakdown(order);
+      const emisor = (CFG && CFG.emisor) || {};
+
+      const itemsRows = (order.items || []).map(it => `
+        <tr class="align-top">
+          <td class="py-1 pr-2">${it.quantity}×</td>
+          <td class="py-1 pr-2">
+            ${escapeHtml(it.name)}
+            ${it.variant ? `<div class="text-[10px] text-gray-500">${escapeHtml(it.variant)}</div>` : ''}
+          </td>
+          <td class="py-1 text-right tabular-nums">${formatEuro(it.price * it.quantity)}</td>
+        </tr>
+      `).join('');
+
+      const ivaRows = breakdown.map(b => `
+        <tr>
+          <td class="py-0.5">Base ${b.rate}%</td>
+          <td class="py-0.5 text-right tabular-nums">${formatEuro(b.base)}</td>
+          <td class="py-0.5 pl-3">IVA ${b.rate}%</td>
+          <td class="py-0.5 text-right tabular-nums">${formatEuro(b.cuota)}</td>
+        </tr>
+      `).join('');
+
+      const qrSrc = inv.qr
+        ? (inv.qr.startsWith('data:') ? inv.qr : `data:image/png;base64,${inv.qr}`)
+        : null;
+
+      const printable = document.getElementById('ticket-printable');
+      printable.innerHTML = `
+        <div class="text-center">
+          <p class="display-font text-2xl">${escapeHtml(emisor.razonSocial || '')}</p>
+          <p class="text-xs text-gray-700">NIF: ${escapeHtml(emisor.nif || '')}</p>
+          ${emisor.direccion ? `<p class="text-xs text-gray-700">${escapeHtml(emisor.direccion)}</p>` : ''}
+          ${(emisor.cp || emisor.poblacion) ? `<p class="text-xs text-gray-700">${escapeHtml([emisor.cp, emisor.poblacion].filter(Boolean).join(' '))}</p>` : ''}
+          ${emisor.telefono ? `<p class="text-xs text-gray-700">Tel: ${escapeHtml(emisor.telefono)}</p>` : ''}
+        </div>
+
+        <hr class="my-3 border-dashed">
+
+        <div class="flex justify-between text-xs text-gray-700 mb-2">
+          <div>
+            <p><strong>Factura:</strong> ${escapeHtml(inv.serie)}/${escapeHtml(String(inv.numero))}</p>
+            <p><strong>Fecha:</strong> ${escapeHtml(inv.fecha || formatDate(order.updatedAt))}</p>
+          </div>
+          <div class="text-right">
+            <p><strong>Pedido:</strong> #${order.code}</p>
+            ${order.table ? `<p><strong>Mesa:</strong> ${escapeHtml(order.table)}</p>` : ''}
+          </div>
+        </div>
+
+        <table class="w-full text-xs border-t border-b border-gray-200">
+          <thead>
+            <tr class="text-left text-[10px] uppercase text-gray-500">
+              <th class="py-1 pr-2 w-10">Cant</th>
+              <th class="py-1 pr-2">Concepto</th>
+              <th class="py-1 text-right">Importe</th>
+            </tr>
+          </thead>
+          <tbody>${itemsRows}</tbody>
+        </table>
+
+        <table class="w-full text-xs mt-2">
+          <tbody>${ivaRows}</tbody>
+          <tfoot>
+            <tr class="border-t">
+              <td class="py-1 font-semibold">Base total</td>
+              <td class="py-1 text-right font-semibold tabular-nums">${formatEuro(totalBase)}</td>
+              <td class="py-1 pl-3 font-semibold">IVA total</td>
+              <td class="py-1 text-right font-semibold tabular-nums">${formatEuro(totalCuota)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="flex items-center justify-between mt-3 pt-2 border-t-2 border-black">
+          <span class="display-font text-xl">TOTAL</span>
+          <span class="display-font text-2xl">${formatEuro(total)}</span>
+        </div>
+
+        <div class="mt-4 text-center">
+          ${qrSrc ? `<img src="${qrSrc}" alt="QR Verifactu" class="mx-auto w-40 h-40 object-contain">` : `<p class="text-xs text-red-600">⚠ QR no disponible (Verifacti no devolvió la imagen)</p>`}
+          <p class="display-font text-base tracking-widest mt-1">${escapeHtml((CFG && CFG.qrLabel) || 'VERI*FACTU')}</p>
+          <p class="text-[10px] text-gray-700">${escapeHtml((CFG && CFG.qrText) || 'Factura verificable en la sede electrónica de la AEAT')}</p>
+        </div>
+
+        <div class="mt-4 text-[9px] text-gray-500 break-all space-y-0.5">
+          ${inv.uuid   ? `<p>UUID: ${escapeHtml(inv.uuid)}</p>` : ''}
+          ${inv.huella ? `<p>Huella: ${escapeHtml(inv.huella)}</p>` : ''}
+          ${inv.env    ? `<p>Entorno: ${escapeHtml(inv.env)}</p>` : ''}
+          <p class="text-center mt-2">¡Gracias por su visita!</p>
+        </div>
+      `;
+      const modal = document.getElementById('ticket-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    document.getElementById('ticket-close').addEventListener('click', () => {
+      const m = document.getElementById('ticket-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    });
+    document.getElementById('ticket-print').addEventListener('click', () => window.print());
+    document.getElementById('ticket-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'ticket-modal') {
+        e.currentTarget.classList.add('hidden');
+        e.currentTarget.classList.remove('flex');
+      }
+    });
 
     document.getElementById('hide-finished').addEventListener('click', () => {
       hideFinished = !hideFinished;

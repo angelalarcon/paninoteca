@@ -15,9 +15,17 @@
  */
 
 (function () {
-  const STORAGE_KEY = 'paninoteca:orders';
-  const COUNTER_KEY = 'paninoteca:nextId';
+  const STORAGE_KEY  = 'paninoteca:orders';
+  const COUNTER_KEY  = 'paninoteca:nextId';
+  /** Contador correlativo de número de factura Verifactu, independiente del
+   *  identificador interno del pedido. Cada serie debe ser estrictamente
+   *  consecutiva: solo se incrementa cuando se emite con éxito. */
+  const INVOICE_KEY  = 'paninoteca:nextInvoice';
   const STATES = ['recibido', 'en_preparacion', 'listo', 'finalizado'];
+
+  /** Estados del registro Verifactu asociado al pedido (independientes de
+   *  los estados de cocina). */
+  const INVOICE_STATES = ['none', 'emitiendo', 'emitida', 'error'];
 
   let channel = null;
   if (typeof BroadcastChannel !== 'undefined') {
@@ -57,6 +65,21 @@
     return id;
   }
 
+  /** Devuelve el próximo número de factura Verifactu (consecutivo, por serie).
+   *  Lo usa quien va a emitir; si la emisión falla, hay que llamar a
+   *  `releaseInvoiceNumber(n)` para no dejar huecos en la numeración. */
+  function nextInvoiceNumber() {
+    const current = parseInt(localStorage.getItem(INVOICE_KEY) || '0', 10) || 0;
+    const n = current + 1;
+    localStorage.setItem(INVOICE_KEY, String(n));
+    return n;
+  }
+
+  function releaseInvoiceNumber(n) {
+    const current = parseInt(localStorage.getItem(INVOICE_KEY) || '0', 10) || 0;
+    if (current === n) localStorage.setItem(INVOICE_KEY, String(n - 1));
+  }
+
   function sanitizeItems(items) {
     if (!Array.isArray(items)) return [];
     return items
@@ -70,11 +93,25 @@
       .filter((it) => it.name);
   }
 
+  function patchOrder(id, patch) {
+    const orders = read();
+    const idx = orders.findIndex((o) => o.id === id);
+    if (idx === -1) throw new Error('Pedido no encontrado');
+    orders[idx] = { ...orders[idx], ...patch, updatedAt: Date.now() };
+    write(orders);
+    return orders[idx];
+  }
+
   const OrdersStore = {
     STATES,
+    INVOICE_STATES,
 
     list() {
       return read();
+    },
+
+    get(id) {
+      return read().find((o) => o.id === id) || null;
     },
 
     add({ items, table, notes }) {
@@ -95,6 +132,11 @@
         status: 'recibido',
         createdAt: now,
         updatedAt: now,
+        /** Estado del registro Verifactu de este pedido. Mientras valga
+         *  'none' significa que aún no se ha emitido ticket fiscal. */
+        invoiceStatus: 'none',
+        invoice: null,        // { uuid, qr, huella, numero, serie, fecha, env }
+        invoiceError: null,
       };
       const orders = read();
       orders.push(order);
@@ -127,6 +169,45 @@
     clearAll() {
       localStorage.removeItem(STORAGE_KEY);
       notify();
+    },
+
+    /** ---- Verifactu / facturación ---- */
+
+    nextInvoiceNumber,
+    releaseInvoiceNumber,
+
+    /** Marca un pedido como "emitiendo" e indica el nº de factura asignado. */
+    markInvoiceEmitting(id, { numero, serie }) {
+      return patchOrder(id, {
+        invoiceStatus: 'emitiendo',
+        invoiceError:  null,
+        invoice: { uuid: null, qr: null, huella: null, numero, serie, fecha: null, env: null },
+      });
+    },
+
+    /** Guarda los datos del registro Verifactu emitido con éxito. */
+    setInvoice(id, data) {
+      return patchOrder(id, {
+        invoiceStatus: 'emitida',
+        invoiceError:  null,
+        invoice: {
+          uuid:   data.uuid   || null,
+          qr:     data.qr     || null,
+          huella: data.huella || null,
+          numero: data.numero,
+          serie:  data.serie,
+          fecha:  data.fecha  || null,
+          env:    data.env    || null,
+        },
+      });
+    },
+
+    /** Registra error de emisión y deja el pedido reabriable para reintentar. */
+    setInvoiceError(id, errorMessage) {
+      return patchOrder(id, {
+        invoiceStatus: 'error',
+        invoiceError:  String(errorMessage || 'Error desconocido').slice(0, 500),
+      });
     },
 
     /** Suscribe `cb` a cualquier cambio (cualquier pestaña, mismo navegador). */

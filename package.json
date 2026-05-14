@@ -1,0 +1,10 @@
+{
+  "name": "paninoteca",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Carta + panel de servicio + integración Verifactu (AEAT) para .14 Cafetería / Paninoteca",
+  "engines": {
+    "node": ">=18"
+  }
+}

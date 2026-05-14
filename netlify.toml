@@ -1,0 +1,21 @@
+# Configuración mínima para Netlify.
+#
+# - El sitio es estático: HTML/JS/CSS sirven desde la raíz del repo.
+# - La función `netlify/functions/verifactu-create.js` se autoexpone en
+#   /api/verifactu-create (vía `export const config = { path: ... }`),
+#   así que NO hace falta declarar redirects para ello.
+
+[build]
+  publish = "."
+  # No hay paso de build (frontend estático).
+  command = ""
+
+[functions]
+  # Carpeta donde Netlify busca las funciones serverless.
+  directory = "netlify/functions"
+  # Runtime moderno con fetch nativo y Web standard Request/Response.
+  node_bundler = "esbuild"
+
+[dev]
+  # Puerto para `netlify dev` (cámbialo si está ocupado).
+  port = 8888
