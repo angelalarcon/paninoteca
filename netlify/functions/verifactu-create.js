@@ -14,14 +14,65 @@
  *
  *   VERIFACTI_API_KEY      vf_test_xxx (sandbox) o vf_prod_xxx (producción)
  *   VERIFACTI_BASE_URL     opcional, por defecto https://api.verifacti.com
+ *   VERIFACTI_MOCK         true/1/yes — respuesta simulada sin llamar a Verifacti
+ *                            (nunca en CONTEXT=production). Si no hay API key,
+ *                            se activa solo en local y deploy previews de Netlify.
  *
  * Documentación Verifacti: https://verifacti.com/docs
  * Documentación Netlify Functions v2: https://docs.netlify.com/functions/get-started/
  */
 
+import { createHash, randomUUID } from 'node:crypto';
+
 const DEFAULT_BASE = 'https://api.verifacti.com';
 
 const round2 = (n) => Math.round(n * 100) / 100;
+
+const truthy = (v) => v === '1' || v === 'true' || v === 'yes';
+
+/** Simulacro permitido solo fuera de producción en Netlify. */
+function isMockEnabled(hasApiKey) {
+  const ctx = process.env.CONTEXT || '';
+  if (ctx === 'production') return false;
+
+  if (truthy(process.env.VERIFACTI_MOCK)) return true;
+
+  if (!hasApiKey) {
+    return (
+      process.env.NETLIFY_DEV === 'true' ||
+      ctx === 'dev' ||
+      ctx === 'deploy-preview' ||
+      ctx === 'branch-deploy'
+    );
+  }
+  return false;
+}
+
+/** QR visible en ticket; no válido ante la AEAT. */
+function mockQrDataUrl(serie, numero) {
+  const label = `${serie}-${numero}`.replace(/[<>&'"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" fill="#fff"/>
+  <rect x="6" y="6" width="148" height="148" fill="none" stroke="#111" stroke-width="3"/>
+  <text x="80" y="58" text-anchor="middle" font-family="monospace" font-size="13" fill="#b91c1c">SIMULACRO</text>
+  <text x="80" y="78" text-anchor="middle" font-family="monospace" font-size="11" fill="#333">VERIFACTU</text>
+  <text x="80" y="98" text-anchor="middle" font-family="monospace" font-size="10" fill="#555">${label}</text>
+  <text x="80" y="118" text-anchor="middle" font-family="sans-serif" font-size="8" fill="#888">No válido en AEAT</text>
+</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
+
+function buildMockVerifacti(payload) {
+  const huella = createHash('sha256')
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  return {
+    uuid:   randomUUID(),
+    qr:     mockQrDataUrl(payload.serie, payload.numero),
+    huella,
+    _mock:  true,
+  };
+}
 
 function formatFechaExpedicion(ms) {
   const d = new Date(ms);
@@ -90,11 +141,12 @@ export default async (req /* , context */) => {
 
   const apiKey  = process.env.VERIFACTI_API_KEY;
   const baseUrl = process.env.VERIFACTI_BASE_URL || DEFAULT_BASE;
+  const useMock = isMockEnabled(Boolean(apiKey));
 
-  if (!apiKey) {
+  if (!apiKey && !useMock) {
     return json({
       error: 'VERIFACTI_API_KEY no configurada en el servidor.',
-      hint:  'Añádela en Netlify → Site settings → Environment variables, o en .env para `netlify dev`.',
+      hint:  'Añádela en Netlify → Site settings → Environment variables, en .env para `netlify dev`, o activa VERIFACTI_MOCK=true en entornos no productivos.',
     }, 500);
   }
 
@@ -144,6 +196,16 @@ export default async (req /* , context */) => {
     lineas,
     importe_total:    String(total),
   };
+
+  if (useMock) {
+    return json({
+      ok:        true,
+      env:       'mock',
+      mock:      true,
+      payload,
+      verifacti: buildMockVerifacti(payload),
+    }, 200);
+  }
 
   let upstream;
   try {

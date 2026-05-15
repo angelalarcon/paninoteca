@@ -252,6 +252,13 @@ En **Netlify → Site settings → Environment variables** añade:
 |----------------------|------------------------------------------------|---------------------|
 | `VERIFACTI_API_KEY`  | `vf_test_…` (sandbox) o `vf_prod_…` (real)     | Functions, Builds   |
 | `VERIFACTI_BASE_URL` | `https://api.verifacti.com` (opcional)         | Functions, Builds   |
+| `VERIFACTI_MOCK`     | `true` — emisión simulada (ver abajo)          | Functions (no prod) |
+
+**Modo simulacro (`VERIFACTI_MOCK`)**: en local (`netlify dev`) y en deploy
+previews de Netlify, si no hay API key configurada la función devuelve un ticket
+de prueba (QR marcado «SIMULACRO», UUID y huella ficticios) sin contactar con
+Verifacti. Con `VERIFACTI_MOCK=true` puedes forzar el simulacro aunque tengas
+key (útil para no gastar llamadas). **Nunca** se activa en `CONTEXT=production`.
 
 O por CLI:
 
