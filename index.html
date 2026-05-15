@@ -492,6 +492,28 @@
       items: MENU.platos.items,
     });
 
+    // Categorías personalizadas (creadas en /inventario)
+    (MENU.customCategories || [])
+      .slice()
+      .sort((a, b) => (a.order ?? 50) - (b.order ?? 50))
+      .forEach((cat) => {
+        if (cat.type === 'grouped' && Array.isArray(cat.groups)) {
+          renderGroupedSection({
+            id: cat.id,
+            title: cat.title,
+            groups: cat.groups,
+          });
+          return;
+        }
+        renderSimpleSection({
+          id: cat.id,
+          title: cat.title,
+          subtitle: cat.note ? `${cat.note}${cat.sharedPrice != null ? ` · ${formatEuro(cat.sharedPrice)}` : ''}` : (cat.sharedPrice != null ? formatEuro(cat.sharedPrice) : null),
+          sharedPrice: cat.sharedPrice != null ? cat.sharedPrice : null,
+          items: cat.items || [],
+        });
+      });
+
     /**
      * Sección "Por Encargo": platos especiales que requieren reserva
      * previa. No usan el flujo del carrito: se muestran como tarjetas

@@ -361,4 +361,16 @@ window.MENU_DATA = {
       },
     ],
   },
+
+  /**
+   * Categorías creadas desde /inventario (no existen en la carta física).
+   * Cada una aparece en la carta del cliente como una sección más.
+   *
+   * type: 'simple'  → lista de productos con precio (o precio único compartido)
+   * type: 'grouped' → subgrupos con productos (como Bebidas o Cafetería)
+   *
+   * order: posición en la carta (menor = más arriba). Por defecto 45
+   *         queda entre Platos y Bebidas.
+   */
+  customCategories: [],
 };

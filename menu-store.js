@@ -21,7 +21,7 @@
   const SCHEMA_KEY   = 'paninoteca:menu:schema';
   /** Sube este número si cambias el modelo de datos de forma incompatible
    *  para forzar una reseed automática. */
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
 
   const SEED = window.MENU_DATA;
   if (!SEED) {
@@ -74,6 +74,10 @@
           }
         }
       }
+    }
+
+    if (!Array.isArray(menu.customCategories)) {
+      menu.customCategories = SEED.customCategories ? clone(SEED.customCategories) : [];
     }
     return menu;
   }
