@@ -16,6 +16,11 @@
   # Runtime moderno con fetch nativo y Web standard Request/Response.
   node_bundler = "esbuild"
 
+[[redirects]]
+  from = "/inventario"
+  to = "/inventario.html"
+  status = 200
+
 [dev]
   # Puerto para `netlify dev` (cámbialo si está ocupado).
   port = 8888

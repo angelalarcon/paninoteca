@@ -56,6 +56,8 @@
           <h1 class="display-font text-2xl sm:text-3xl leading-none">Cafetería / Paninoteca</h1>
         </div>
       </div>
+      <div class="flex items-center gap-2">
+      <a href="/inventario" class="hidden sm:inline-flex text-xs font-semibold text-gray-500 hover:text-brand-dark px-3 py-2 rounded-full border border-gray-200 hover:border-gray-300 transition" title="Gestionar carta">Inventario</a>
       <button id="cart-button" class="relative inline-flex items-center gap-2 bg-brand-red hover:bg-red-700 text-white px-4 py-2 rounded-full font-semibold shadow-md transition">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -63,6 +65,7 @@
         <span class="hidden sm:inline">Mi pedido</span>
         <span id="cart-count" class="bg-white text-brand-red text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">0</span>
       </button>
+      </div>
     </div>
     <!-- Category nav -->
     <nav id="category-nav" class="max-w-6xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto scroll-hide"></nav>
@@ -87,7 +90,14 @@
     </div>
     <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
     <div class="border-t p-4 space-y-3 bg-gray-50">
-      <div>
+      <!-- Selector de cuenta abierta. Si no hay cuentas abiertas, este
+           bloque se oculta y queda solo el input "Mesa / Nombre". -->
+      <div id="account-picker-block" class="hidden">
+        <p class="text-xs font-semibold text-gray-600 mb-1.5">¿A qué cuenta lo añadimos?</p>
+        <div id="account-picker" class="flex flex-wrap gap-1.5"></div>
+        <p id="account-picker-hint" class="hidden text-xs mt-2 px-3 py-2 rounded-lg bg-brand-cream border border-amber-200 text-amber-900 leading-snug"></p>
+      </div>
+      <div id="cart-table-block">
         <label class="block text-xs font-semibold text-gray-600 mb-1" for="cart-table">Mesa / Nombre (opcional)</label>
         <input id="cart-table" type="text" placeholder="Ej. Mesa 4 ó Ana"
                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-red focus:outline-none" />
@@ -144,10 +154,11 @@
   </div>
 
   <script src="menu-data.js"></script>
+  <script src="menu-store.js"></script>
   <script src="orders-store.js"></script>
   <script>
   (function () {
-    const MENU = window.MENU_DATA;
+    let MENU = window.MenuStore ? window.MenuStore.get() : window.MENU_DATA;
     /** Cart structure: array of { key, id, name, variant, price, quantity } */
     const cart = [];
 
@@ -216,6 +227,37 @@
           <ellipse cx="12"   cy="15" rx="0.7" ry="1.4" fill="#a8753a"/>
           <ellipse cx="13.5" cy="13" rx="0.7" ry="1.4" fill="#a8753a"/>
         </svg>`,
+      milk_soja: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#f4ecd0" stroke="#7c8a3c" stroke-width="1.2"/>
+          <circle cx="10.5" cy="13" r="1.1" fill="#a4b85a"/>
+          <circle cx="13.5" cy="14" r="1.1" fill="#a4b85a"/>
+          <circle cx="12"   cy="11" r="0.9" fill="#a4b85a"/>
+        </svg>`,
+      milk_almendra: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#f4e3cf" stroke="#8b5e2b" stroke-width="1.2"/>
+          <ellipse cx="11"   cy="13" rx="1.1" ry="1.7" fill="#b67e4a" transform="rotate(-25 11 13)"/>
+          <ellipse cx="13.5" cy="14" rx="1.1" ry="1.7" fill="#b67e4a" transform="rotate(15 13.5 14)"/>
+        </svg>`,
+      milk_coco: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#ffffff" stroke="#5e3a1d" stroke-width="1.2"/>
+          <circle cx="10" cy="13" r="0.7" fill="#5e3a1d"/>
+          <circle cx="13" cy="14" r="0.7" fill="#5e3a1d"/>
+          <circle cx="11.5" cy="11.5" r="0.5" fill="#5e3a1d"/>
+        </svg>`,
+      milk_arroz: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#fbf6e8" stroke="#c9a85a" stroke-width="1.2"/>
+          <ellipse cx="10.5" cy="13" rx="0.5" ry="1.1" fill="#c9a85a"/>
+          <ellipse cx="12"   cy="14.5" rx="0.5" ry="1.1" fill="#c9a85a"/>
+          <ellipse cx="13.5" cy="13" rx="0.5" ry="1.1" fill="#c9a85a"/>
+        </svg>`,
+      milk_other: `
+        <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 3 C12 3 6 10 6 14 A6 6 0 0 0 18 14 C18 10 12 3 12 3 Z" fill="#f5f5f5" stroke="#888" stroke-width="1.2"/>
+        </svg>`,
       size_normal: `
         <svg viewBox="0 0 24 24" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M9 11 L9.5 19 Q9.5 20 10.5 20 L13.5 20 Q14.5 20 14.5 19 L15 11 Z" fill="#fff8eb" stroke="#3a2410" stroke-width="1.2"/>
@@ -259,6 +301,13 @@
       a.className = 'shrink-0 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-brand-dark hover:text-white text-sm font-semibold whitespace-nowrap transition';
       return a;
     }
+
+    // CAFETERÍA va primero: la mayoría de clientes entra a por café.
+    renderGroupedSection({
+      id: 'cafeteria',
+      title: MENU.cafeteria.title,
+      groups: MENU.cafeteria.groups,
+    });
 
     // PANINI section
     const paniniSection = addSection('panini', 'Panini');
@@ -444,9 +493,66 @@
     });
 
     /**
+     * Sección "Por Encargo": platos especiales que requieren reserva
+     * previa. No usan el flujo del carrito: se muestran como tarjetas
+     * informativas con un CTA para llamar a la cafetería.
+     */
+    function renderPorEncargoSection(data) {
+      const sec = addSection('por-encargo', data.title);
+      sec.innerHTML = `
+        <div class="mb-4 flex items-baseline justify-between flex-wrap gap-2">
+          <div>
+            <h2 class="display-font text-4xl text-brand-dark">${data.title}</h2>
+            ${data.subtitle ? `<p class="text-sm text-gray-500 mt-0.5">${data.subtitle}</p>` : ''}
+          </div>
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-green bg-green-50 border border-green-200 rounded-full px-3 py-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-green"></span>
+            Reserva previa
+          </span>
+        </div>
+
+        <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-brand-cream to-white p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm sm:text-base text-gray-700 leading-relaxed">${data.note}</p>
+          </div>
+          <a href="tel:${data.phoneTel}"
+             class="shrink-0 inline-flex items-center justify-center gap-2 bg-brand-red hover:bg-red-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l1.5 4.5a1 1 0 01-.5 1.21l-1.92.96a11 11 0 005.36 5.36l.96-1.92a1 1 0 011.21-.5l4.5 1.5a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.72 21 3 14.28 3 6V5z"/>
+            </svg>
+            <span>Llamar para reservar</span>
+          </a>
+        </div>
+      `;
+
+      const grid = document.createElement('div');
+      grid.className = 'grid gap-4 sm:grid-cols-2';
+      sec.appendChild(grid);
+
+      data.items.forEach((item) => {
+        const card = document.createElement('article');
+        card.className = 'bg-white border border-gray-100 rounded-2xl shadow-sm p-5 flex gap-4';
+        card.innerHTML = `
+          <div class="shrink-0 w-14 h-14 rounded-xl bg-brand-cream border border-amber-100 flex items-center justify-center text-3xl" aria-hidden="true">
+            ${item.emoji}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="display-font text-2xl text-brand-dark leading-tight">${item.name}</h3>
+              <span class="shrink-0 text-xs font-semibold text-gray-500 bg-gray-100 rounded-full px-2.5 py-1 whitespace-nowrap">Por encargo</span>
+            </div>
+            <p class="text-sm text-gray-600 mt-1.5 leading-relaxed">${item.description}</p>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    /**
      * Render a customisable café card. The item may declare any combination of:
      *   - `sizes`            → array of {id, label, price, icon}
-     *   - `avenaSurcharge`   → number (extra € when oat milk selected)
+     *   - `milks`            → array of milk type ids (see global `milkTypes`)
+     *   - `milkSurcharges`   → per-coffee override of milk surcharge {id: €}
      *   - `decafSurcharge`   → number (extra € when decaf selected)
      *
      * Each option group renders as an icon toggle, like the panini bread
@@ -458,14 +564,30 @@
       const card = document.createElement('div');
       card.className = 'bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex flex-col';
 
+      const allMilks = Array.isArray(MENU.milkTypes) ? MENU.milkTypes : [];
+      // `availableMilks` resuelve los ids declarados en el item contra el
+      // registro global, descartando ids huérfanos (p. ej. si se borró un
+      // tipo de leche desde inventario y el café no se actualizó).
+      const availableMilks = (Array.isArray(item.milks) ? item.milks : [])
+        .map((id) => allMilks.find((m) => m.id === id))
+        .filter(Boolean);
+
       const hasSize  = Array.isArray(item.sizes) && item.sizes.length > 0;
-      const hasMilk  = typeof item.avenaSurcharge === 'number';
+      const hasMilk  = availableMilks.length >= 2;
       const hasDecaf = typeof item.decafSurcharge === 'number';
       const hasOpts  = hasSize || hasMilk || hasDecaf;
 
-      let selSize   = hasSize ? item.sizes[0].id : null;
-      let useAvena  = false;
-      let useDecaf  = false;
+      let selSize    = hasSize ? item.sizes[0].id : null;
+      let selMilkId  = hasMilk ? availableMilks[0].id : null;
+      let useDecaf   = false;
+
+      const milkSurchargeFor = (id) => {
+        if (item.milkSurcharges && typeof item.milkSurcharges[id] === 'number') {
+          return item.milkSurcharges[id];
+        }
+        const m = allMilks.find((m) => m.id === id);
+        return (m && typeof m.surcharge === 'number') ? m.surcharge : 0;
+      };
 
       const basePrice = () => {
         if (hasSize) {
@@ -476,14 +598,14 @@
       };
       const totalPrice = () =>
         basePrice()
-        + (useAvena ? (item.avenaSurcharge || 0) : 0)
-        + (useDecaf ? (item.decafSurcharge || 0) : 0);
+        + (hasMilk  ? milkSurchargeFor(selMilkId) : 0)
+        + (useDecaf ? (item.decafSurcharge || 0)  : 0);
 
       const getKey = () => [
         item.id,
-        hasSize  ? `s:${selSize}`             : '',
-        hasMilk  ? (useAvena ? 'avena' : '')  : '',
-        hasDecaf ? (useDecaf ? 'desc'  : '')  : '',
+        hasSize  ? `s:${selSize}`     : '',
+        hasMilk  ? `m:${selMilkId}`   : '',
+        hasDecaf ? (useDecaf ? 'desc' : '') : '',
       ].filter(Boolean).join('|');
 
       const variantLabel = () => {
@@ -492,8 +614,11 @@
           const s = item.sizes.find(s => s.id === selSize);
           if (s) parts.push(s.label);
         }
-        parts.push(useAvena ? 'Leche de avena' : (hasMilk ? 'Leche normal' : null));
-        parts.push(useDecaf ? 'Descafeinado'    : (hasDecaf ? 'Con cafeína' : null));
+        if (hasMilk) {
+          const m = availableMilks.find(m => m.id === selMilkId);
+          if (m) parts.push(m.label);
+        }
+        parts.push(useDecaf ? 'Descafeinado' : (hasDecaf ? 'Con cafeína' : null));
         return parts.filter(Boolean).join(' · ');
       };
 
@@ -518,25 +643,20 @@
           `).join('')}
         </div>` : '';
 
-      const avenaExtra = item.avenaSurcharge
-        ? ` (+${formatEuro(item.avenaSurcharge)})`
-        : '';
       const milkHtml = hasMilk ? `
         <div class="cafe-opt-group inline-flex items-center bg-gray-50 border rounded-xl p-0.5"
              role="radiogroup" aria-label="Tipo de leche" data-opt="milk">
-          <button type="button" role="radio" data-value="normal"
-                  aria-checked="true"
-                  aria-label="Leche normal" title="Leche normal"
-                  class="${optBtnBase} ${optBtnSel}">
-            ${coffeeIconFor('milk_normal')}
-          </button>
-          <button type="button" role="radio" data-value="avena"
-                  aria-checked="false"
-                  aria-label="Leche de avena${avenaExtra}"
-                  title="Leche de avena${avenaExtra}"
-                  class="${optBtnBase} ${optBtnIdle}">
-            ${coffeeIconFor('milk_avena')}
-          </button>
+          ${availableMilks.map((m, idx) => {
+            const extra = milkSurchargeFor(m.id);
+            const extraTxt = extra ? ` (+${formatEuro(extra)})` : '';
+            return `
+              <button type="button" role="radio" data-value="${m.id}"
+                      aria-checked="${idx === 0 ? 'true' : 'false'}"
+                      aria-label="${m.label}${extraTxt}" title="${m.label}${extraTxt}"
+                      class="${optBtnBase} ${idx === 0 ? optBtnSel : optBtnIdle}">
+                ${coffeeIconFor(m.icon || 'milk_other')}
+              </button>`;
+          }).join('')}
         </div>` : '';
 
       const decafExtra = item.decafSurcharge
@@ -608,9 +728,9 @@
         groupEl.querySelectorAll('.cafe-opt-btn').forEach((btn) => {
           btn.addEventListener('click', () => {
             const v = btn.dataset.value;
-            if (optName === 'size')  selSize  = v;
-            if (optName === 'milk')  useAvena = v === 'avena';
-            if (optName === 'decaf') useDecaf = v === 'yes';
+            if (optName === 'size')  selSize    = v;
+            if (optName === 'milk')  selMilkId  = v;
+            if (optName === 'decaf') useDecaf   = v === 'yes';
             paintSelection(groupEl, v);
             refreshUI();
           });
@@ -660,7 +780,7 @@
         group.items.forEach((item) => {
           const hasOptions =
             Array.isArray(item.sizes) ||
-            typeof item.avenaSurcharge === 'number' ||
+            (Array.isArray(item.milks) && item.milks.length >= 2) ||
             typeof item.decafSurcharge === 'number';
 
           if (hasOptions) {
@@ -705,16 +825,14 @@
     }
 
     renderGroupedSection({
-      id: 'cafeteria',
-      title: MENU.cafeteria.title,
-      groups: MENU.cafeteria.groups,
-    });
-
-    renderGroupedSection({
       id: 'bebidas',
       title: MENU.bebidas.title,
       groups: MENU.bebidas.groups,
     });
+
+    // POR ENCARGO va al final: es un servicio especial con reserva previa,
+    // no parte del flujo de pedido inmediato.
+    renderPorEncargoSection(MENU.porEncargo);
 
     // Build category nav
     sections.forEach(s => nav.appendChild(navButton(s)));
@@ -764,6 +882,95 @@
     const mobileBar    = document.getElementById('mobile-cart-bar');
     const mobileCount  = document.getElementById('mobile-cart-count');
     const mobileTotal  = document.getElementById('mobile-cart-total');
+
+    // ---------- Selector de cuenta abierta ----------
+    //
+    // Si el servicio ha abierto cuentas (mesas/grupos), el cliente puede
+    // adjuntar este pedido a una de ellas. Por defecto, "Sin cuenta" → el
+    // pedido se envía suelto y se sigue usando el campo Mesa / Nombre.
+    const accountBlockEl = document.getElementById('account-picker-block');
+    const accountPickerEl = document.getElementById('account-picker');
+    const accountHintEl   = document.getElementById('account-picker-hint');
+    const tableBlockEl    = document.getElementById('cart-table-block');
+    /** ID de cuenta seleccionada por el cliente (null = pedido suelto). */
+    let selectedAccountId = null;
+
+    function renderAccountPicker() {
+      const open = window.OrdersStore && window.OrdersStore.accounts
+        ? window.OrdersStore.accounts.listOpen()
+        : [];
+
+      if (open.length === 0) {
+        accountBlockEl.classList.add('hidden');
+        tableBlockEl.classList.remove('hidden');
+        accountHintEl.classList.add('hidden');
+        if (selectedAccountId !== null) selectedAccountId = null;
+        return;
+      }
+
+      // Si la cuenta seleccionada se ha cerrado desde otra pestaña, la
+      // deseleccionamos para no enviar a una cuenta que ya no existe.
+      if (selectedAccountId != null && !open.find(a => a.id === selectedAccountId)) {
+        selectedAccountId = null;
+      }
+
+      accountBlockEl.classList.remove('hidden');
+
+      const chip = (label, selected, sub) => `
+        <button type="button"
+                class="account-chip text-left px-3 py-2 rounded-xl border text-sm font-semibold transition
+                       ${selected
+                         ? 'bg-brand-red text-white border-brand-red shadow'
+                         : 'bg-white text-gray-700 border-gray-200 hover:border-brand-red'}">
+          <span class="block leading-tight">${label}</span>
+          ${sub ? `<span class="block text-[11px] font-medium ${selected ? 'text-white/85' : 'text-gray-500'}">${sub}</span>` : ''}
+        </button>`;
+
+      const chips = [
+        { id: null, html: chip('Sin cuenta', selectedAccountId === null, 'Pedido suelto') },
+        ...open.map((a) => ({
+          id: a.id,
+          html: chip(
+            escapeAttr(a.name),
+            selectedAccountId === a.id,
+            `Total cuenta: ${formatEuro(window.OrdersStore.accounts.total(a.id))}`,
+          ),
+        })),
+      ];
+
+      accountPickerEl.innerHTML = chips.map(c => c.html).join('');
+      Array.from(accountPickerEl.querySelectorAll('.account-chip')).forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+          selectedAccountId = chips[i].id;
+          renderAccountPicker();
+        });
+      });
+
+      // Cuando se selecciona una cuenta, ocultamos el campo "Mesa / Nombre"
+      // (la cuenta ya identifica al grupo) y mostramos un aviso claro de a
+      // qué cuenta se está añadiendo y cuál es el total acumulado.
+      if (selectedAccountId != null) {
+        const acc = open.find(a => a.id === selectedAccountId);
+        const total = window.OrdersStore.accounts.total(acc.id);
+        accountHintEl.classList.remove('hidden');
+        accountHintEl.innerHTML =
+          `Vas a añadir a <strong>${escapeAttr(acc.name)}</strong>. ` +
+          `Total acumulado de la cuenta: <strong>${formatEuro(total)}</strong>.`;
+        tableBlockEl.classList.add('hidden');
+      } else {
+        accountHintEl.classList.add('hidden');
+        tableBlockEl.classList.remove('hidden');
+      }
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+    }
+
+    if (window.OrdersStore && typeof window.OrdersStore.subscribe === 'function') {
+      window.OrdersStore.subscribe(renderAccountPicker);
+    }
+    renderAccountPicker();
 
     function renderCart() {
       const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
@@ -843,9 +1050,17 @@
       cartSubmit.innerHTML = 'Enviando…';
 
       try {
+        // Si hay una cuenta seleccionada, dejamos que `OrdersStore.add` use
+        // el nombre de la cuenta como `table` para no perder esa pista en
+        // el panel de servicio cuando se imprima sin contexto de cuenta.
+        const tableInput = selectedAccountId != null
+          ? ''
+          : document.getElementById('cart-table').value.trim();
+
         const order = window.OrdersStore.add({
-          table: document.getElementById('cart-table').value.trim(),
+          table: tableInput,
           notes: document.getElementById('cart-notes').value.trim(),
+          accountId: selectedAccountId,
           items: cart.map(c => ({
             id: c.id,
             name: c.name,

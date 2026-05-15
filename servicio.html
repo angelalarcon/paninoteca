@@ -82,7 +82,7 @@
         </label>
         <button id="hide-finished"
                 class="text-xs sm:text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-full">
-          <span id="hide-finished-label">Ocultar finalizados</span>
+          <span id="hide-finished-label">Ocultar Pagado</span>
         </button>
         <button id="clear-all"
                 title="Borrar todos los pedidos"
@@ -95,7 +95,7 @@
 
   <!-- Stats / column headers -->
   <section class="max-w-7xl mx-auto px-4 mt-4">
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
       <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-3 flex items-center justify-between">
         <div>
           <p class="text-xs uppercase tracking-wide text-gray-500">Recibidos</p>
@@ -117,20 +117,56 @@
         </div>
         <span class="text-2xl">✅</span>
       </div>
-      <div class="bg-white rounded-xl shadow-sm border-l-4 border-gray-400 p-3 flex items-center justify-between">
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-brand-red p-3 flex items-center justify-between">
         <div>
-          <p class="text-xs uppercase tracking-wide text-gray-500">Finalizados</p>
-          <p class="display-font text-3xl text-gray-500" id="count-finalizado">0</p>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Entregados</p>
+          <p class="display-font text-3xl text-brand-red" id="count-entregado">0</p>
         </div>
-        <span class="text-2xl">📦</span>
+        <span class="text-2xl">🍽️</span>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border-l-4 border-gray-500 p-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500">Pagados</p>
+          <p class="display-font text-3xl text-gray-600" id="count-pagado">0</p>
+        </div>
+        <span class="text-2xl">💶</span>
       </div>
     </div>
   </section>
 
+  <!-- Modal: asignar mesa / cuenta a un pedido -->
+  <div id="assign-modal"
+       class="fixed inset-0 z-50 bg-black/60 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+      <h3 class="display-font text-2xl text-brand-dark mb-1">Asignar a mesa o cuenta</h3>
+      <p id="assign-modal-desc" class="text-sm text-gray-600 mb-4">
+        Pedido <span id="assign-modal-target" class="font-semibold text-brand-dark"></span>.
+        Ponle el nombre de la mesa o cuenta (ej. <em>Mesa 4</em>, <em>Ana</em>).
+        Si ya hay otros pedidos con ese mismo nombre, se cobrarán juntos.
+      </p>
+      <input id="assign-name-input" type="text" placeholder="Mesa 4, Ana, Terraza 2…"
+             maxlength="40" list="assign-name-options" autocomplete="off"
+             class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-red focus:outline-none mb-3" />
+      <datalist id="assign-name-options"></datalist>
+      <p id="assign-modal-error" class="hidden text-sm text-red-600 mb-3"></p>
+      <div class="flex justify-between items-center gap-2">
+        <button id="assign-modal-clear"
+                class="text-xs text-gray-500 hover:text-brand-red underline">Quitar mesa</button>
+        <div class="flex gap-2">
+          <button id="assign-modal-cancel"
+                  class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg">Cancelar</button>
+          <button id="assign-modal-ok"
+                  class="text-sm font-semibold bg-brand-green hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Kanban board -->
   <main class="max-w-7xl mx-auto px-4 pb-12">
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-      <!-- Columns will be injected here -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
       <div data-column="recibido" class="bg-blue-50 rounded-2xl p-3 flex flex-col min-h-[300px]">
         <header class="flex items-center justify-between mb-3 px-2">
           <h2 class="display-font text-2xl text-blue-700 flex items-center gap-2">
@@ -164,15 +200,26 @@
         <p data-empty class="text-center text-green-400 text-sm py-8">Nada listo aún</p>
       </div>
 
-      <div data-column="finalizado" class="bg-gray-100 rounded-2xl p-3 flex flex-col min-h-[300px]" id="finished-col">
+      <div data-column="entregado" class="bg-red-50 rounded-2xl p-3 flex flex-col min-h-[300px]">
+        <header class="flex items-center justify-between mb-3 px-2">
+          <h2 class="display-font text-2xl text-brand-red flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-brand-red"></span> Entregados
+          </h2>
+          <span class="bg-red-200 text-red-900 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
+        </header>
+        <div class="space-y-3 flex-1" data-list></div>
+        <p data-empty class="text-center text-red-300 text-sm py-8">Sin entregar todavía</p>
+      </div>
+
+      <div data-column="pagado" class="bg-gray-100 rounded-2xl p-3 flex flex-col min-h-[300px]" id="finished-col">
         <header class="flex items-center justify-between mb-3 px-2">
           <h2 class="display-font text-2xl text-gray-600 flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-gray-500"></span> Finalizados
+            <span class="w-3 h-3 rounded-full bg-gray-500"></span> Pagados
           </h2>
           <span class="bg-gray-300 text-gray-800 text-xs font-bold px-2 py-0.5 rounded-full" data-count></span>
         </header>
         <div class="space-y-3 flex-1" data-list></div>
-        <p data-empty class="text-center text-gray-400 text-sm py-8">Sin pedidos finalizados</p>
+        <p data-empty class="text-center text-gray-400 text-sm py-8">Nada cobrado todavía</p>
       </div>
     </div>
   </main>
@@ -205,25 +252,34 @@
   <script src="orders-store.js"></script>
   <script>
   (function () {
-    const STATES = ['recibido', 'en_preparacion', 'listo', 'finalizado'];
+    const STATES = ['recibido', 'en_preparacion', 'listo', 'entregado', 'pagado'];
     const STATE_LABEL = {
       recibido:       'Recibido',
       en_preparacion: 'En preparación',
       listo:          'Listo',
-      finalizado:     'Finalizado',
+      entregado:      'Entregado',
+      pagado:         'Pagado',
     };
     const NEXT_LABEL = {
       recibido:       { next: 'en_preparacion', label: 'Empezar a preparar' },
       en_preparacion: { next: 'listo',          label: 'Marcar como listo' },
-      listo:          { next: 'finalizado',     label: 'Entregado / Finalizado' },
+      listo:          { next: 'entregado',      label: 'Marcar como entregado' },
+      // entregado → pagado se hace mediante "Cobrar" (emite ticket).
     };
     const PREV_LABEL = {
       en_preparacion: { prev: 'recibido',       label: 'Volver' },
       listo:          { prev: 'en_preparacion', label: 'Volver a cocina' },
-      finalizado:     { prev: 'listo',          label: 'Reabrir' },
+      entregado:      { prev: 'listo',          label: 'Reabrir' },
+      pagado:         { prev: 'entregado',      label: 'Anular cobro' },
     };
 
     const ordersById = new Map();
+    /** Cuentas existentes en el store (id → objeto). No hay UI dedicada
+     *  a gestionarlas: solo las usamos para mostrar el nombre de la
+     *  mesa en cada tarjeta y para autocompletar el modal de
+     *  asignación. Se crean/se cierran de forma transparente al asignar
+     *  o al cobrar pedidos. */
+    const accountsById = new Map();
     let hideFinished = false;
 
     /** Configuración fiscal (datos emisor + serie + IVA). Si falta, no podemos emitir. */
@@ -282,11 +338,23 @@
     }
 
     function elapsedColor(ms, status) {
-      if (status === 'finalizado') return 'text-gray-400';
+      if (status === 'pagado' || status === 'entregado') return 'text-gray-400';
       const min = (Date.now() - ms) / 60000;
       if (min < 5)  return 'text-gray-500';
       if (min < 10) return 'text-amber-600 font-semibold';
       return 'text-red-600 font-bold';
+    }
+
+    /** Cuenta cuántos otros pedidos comparten cuenta y siguen en
+     *  `entregado` (no cobrados) — útil para mostrar "Cobrar mesa
+     *  entera (3 pedidos · €25)" en la columna de cobro. */
+    function siblingsToBill(order) {
+      if (order.accountId == null) return [];
+      return Array.from(ordersById.values()).filter(o =>
+        o.accountId === order.accountId &&
+        o.status === 'entregado' &&
+        (o.invoiceStatus || 'none') !== 'emitida'
+      );
     }
 
     function renderOrderCard(order) {
@@ -298,6 +366,7 @@
       const prev = PREV_LABEL[order.status];
       const isNew = order.status === 'recibido' && (Date.now() - order.createdAt < 8000);
       if (isNew) wrapper.classList.add('new-order');
+      if (order.status === 'pagado') wrapper.classList.add('opacity-90');
 
       const itemsHtml = order.items.map(it => `
         <li class="flex items-baseline gap-2 text-sm py-1">
@@ -321,39 +390,90 @@
           return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">⏳ emitiendo…</span>`;
         }
         if (invoiceStatus === 'error') {
-          return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800" title="${escapeHtml(order.invoiceError || '')}">⚠ error Verifactu</span>`;
+          return `<span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-red-100 text-red-800" title="${escapeHtml(order.invoiceError || '')}">⚠ error</span>`;
         }
         return '';
       })();
 
-      const invoiceButton = (() => {
-        if (invoiceStatus === 'emitida') {
-          return `<button data-action="ticket-view"
-                    class="flex-1 min-w-[140px] text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border">
-                    🧾 Ver / Imprimir ticket
-                  </button>`;
+      // Etiqueta de mesa/cuenta del pedido. Si está vinculado a una
+      // cuenta abierta, mostramos "🪧 nombre"; si es solo un texto libre
+      // (table sin accountId), lo señalamos en gris. Click en el lápiz
+      // abre el modal de asignación.
+      const linkedAccount = order.accountId != null
+        ? accountsById.get(order.accountId)
+        : null;
+      const tableName = linkedAccount
+        ? linkedAccount.name
+        : (order.table ? order.table : '');
+      const tableBadge = (() => {
+        if (linkedAccount) {
+          return `<span class="bg-brand-dark text-white text-xs font-semibold px-2 py-0.5 rounded inline-flex items-center gap-1">
+                    🪧 ${escapeHtml(linkedAccount.name)}
+                  </span>`;
         }
-        if (invoiceStatus === 'emitiendo') {
-          return `<button disabled
-                    class="flex-1 min-w-[140px] text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-2 rounded-lg cursor-wait">
-                    Emitiendo…
-                  </button>`;
+        if (order.table) {
+          return `<span class="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-0.5 rounded inline-flex items-center gap-1" title="Etiqueta sin cuenta vinculada">
+                    ${escapeHtml(order.table)}
+                  </span>`;
         }
-        const label = invoiceStatus === 'error' ? 'Reintentar emisión' : 'Emitir ticket Verifactu';
-        const cls   = invoiceStatus === 'error'
-          ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
-          : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200';
-        return `<button data-action="ticket-emit"
-                  class="flex-1 min-w-[140px] text-xs font-semibold ${cls} px-3 py-2 rounded-lg transition border">
-                  🧾 ${label}
-                </button>`;
+        return '';
       })();
+      const assignButton = order.status === 'pagado'
+        ? ''
+        : `<button data-action="assign"
+                   title="${tableName ? 'Cambiar mesa / cuenta' : 'Asignar a mesa o cuenta'}"
+                   class="text-xs text-gray-500 hover:text-brand-dark px-1.5 py-0.5 rounded">
+             ${tableName ? '✏️' : '🪧 Asignar mesa'}
+           </button>`;
+
+      // Botonera de fase / cobro:
+      //  - listo → entregado: botón verde "Marcar como entregado"
+      //  - entregado → cobrar: botón rojo "Cobrar"
+      //  - pagado: badge + ver/imprimir + eliminar
+      const sibs = order.status === 'entregado' ? siblingsToBill(order) : [];
+      const hasSiblings = sibs.length > 1; // incluye este pedido
+      const tableTotal = hasSiblings
+        ? sibs.reduce((s, o) => s + (Number(o.total) || 0), 0)
+        : order.total;
+
+      let primaryButton = '';
+      if (order.status === 'entregado') {
+        if (invoiceStatus === 'emitiendo') {
+          primaryButton = `<button disabled
+                              class="flex-1 min-w-[140px] text-sm font-bold bg-amber-200 text-amber-800 px-3 py-2 rounded-lg cursor-wait">
+                              Emitiendo ticket…
+                            </button>`;
+        } else {
+          const cobrarLabel = hasSiblings
+            ? `💶 Cobrar mesa (${sibs.length} ped · ${formatEuro(tableTotal)})`
+            : (invoiceStatus === 'error' ? '💶 Reintentar cobro' : '💶 Cobrar');
+          primaryButton = `<button data-action="charge"
+                              class="flex-1 min-w-[140px] text-sm font-bold bg-brand-red hover:bg-red-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                              ${cobrarLabel}
+                            </button>`;
+        }
+      } else if (next) {
+        primaryButton = `<button data-action="next" data-target="${next.next}"
+                          class="flex-1 min-w-[140px] text-sm font-bold bg-brand-green hover:bg-green-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
+                          ${next.label} →
+                        </button>`;
+      } else if (order.status === 'pagado') {
+        primaryButton = `<button data-action="ticket-view"
+                          class="flex-1 min-w-[140px] text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border">
+                          🧾 Ver / Imprimir ticket
+                        </button>
+                        <button data-action="delete"
+                          class="text-xs font-medium bg-gray-100 hover:bg-red-100 hover:text-red-700 text-gray-600 px-3 py-2 rounded-lg transition">
+                          Archivar
+                        </button>`;
+      }
 
       wrapper.innerHTML = `
         <div class="px-4 py-3 border-b flex items-center justify-between gap-2 bg-gradient-to-r from-white to-gray-50">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="display-font text-3xl text-brand-dark leading-none">#${order.code}</span>
-            ${order.table ? `<span class="bg-brand-dark text-white text-xs font-semibold px-2 py-0.5 rounded">${escapeHtml(order.table)}</span>` : ''}
+            ${tableBadge}
+            ${assignButton}
             ${invoiceBadge}
           </div>
           <div class="text-right text-xs">
@@ -377,17 +497,7 @@
                        class="flex-1 min-w-[120px] text-xs font-semibold bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg transition">
                        ← ${prev.label}
                      </button>` : ''}
-          ${next ? `<button data-action="next" data-target="${next.next}"
-                       class="flex-1 min-w-[140px] text-sm font-bold bg-brand-green hover:bg-green-700 text-white px-3 py-2 rounded-lg shadow-sm transition">
-                       ${next.label} →
-                     </button>` : `
-                     <button data-action="delete"
-                       class="flex-1 text-sm font-semibold bg-gray-200 hover:bg-red-500 hover:text-white text-gray-700 px-3 py-2 rounded-lg transition">
-                       Eliminar del historial
-                     </button>`}
-        </div>
-        <div class="px-3 pb-3 flex flex-wrap gap-2">
-          ${invoiceButton}
+          ${primaryButton}
         </div>
       `;
 
@@ -400,11 +510,13 @@
             if (confirm(`¿Eliminar el pedido #${order.code} del historial?`)) {
               deleteOrder(order.id);
             }
-          } else if (action === 'ticket-emit') {
-            emitInvoice(order.id);
+          } else if (action === 'charge') {
+            chargeOrder(order.id);
           } else if (action === 'ticket-view') {
             const fresh = window.OrdersStore.get(order.id);
-            if (fresh) openTicketModal(fresh);
+            if (fresh) openTicketForOrder(fresh);
+          } else if (action === 'assign') {
+            openAssignModal(order.id);
           }
         });
       });
@@ -424,11 +536,21 @@
         const countEl = col.querySelector('[data-count]');
 
         list.innerHTML = '';
+
         const items = Array.from(ordersById.values())
           .filter(o => o.status === state)
-          .sort((a, b) => state === 'finalizado'
-            ? b.updatedAt - a.updatedAt
-            : a.createdAt - b.createdAt);
+          .sort((a, b) => {
+            // En "entregado" agrupamos visualmente los pedidos de la
+            // misma cuenta (van consecutivos), para que se cobren juntos
+            // a golpe de vista. En el resto de columnas, orden cronológico.
+            if (state === 'entregado') {
+              const aKey = a.accountId != null ? `a${a.accountId}` : `o${a.id}`;
+              const bKey = b.accountId != null ? `a${b.accountId}` : `o${b.id}`;
+              if (aKey !== bKey) return aKey < bKey ? -1 : 1;
+            }
+            if (state === 'pagado') return b.updatedAt - a.updatedAt;
+            return a.createdAt - b.createdAt;
+          });
 
         items.forEach(o => list.appendChild(renderOrderCard(o)));
         countEl.textContent = items.length;
@@ -437,9 +559,11 @@
         document.getElementById(`count-${state}`).textContent = items.length;
       });
 
-      // Apply hide-finished
+      // Apply hide-finished (oculta la columna "Pagado" para mantener
+      // el panel limpio durante el servicio).
       document.getElementById('finished-col').style.display = hideFinished ? 'none' : '';
     }
+
 
     // Periodically refresh "elapsed" labels
     setInterval(() => {
@@ -491,6 +615,17 @@
         ordersById.set(o.id, o);
         if (!previousIds.has(o.id)) newIds.push(o.id);
       });
+
+      // Las cuentas siguen viviendo en el store (se usan para agrupar
+      // pedidos por mesa al cobrar), aunque ya no haya UI dedicada.
+      // Las cargamos para poder mostrar el badge "🪧 Mesa X" en cada
+      // tarjeta y para resolver nombres existentes en el datalist del
+      // modal de asignación.
+      accountsById.clear();
+      const accs = window.OrdersStore.accounts
+        ? window.OrdersStore.accounts.list()
+        : [];
+      accs.forEach((a) => accountsById.set(a.id, a));
 
       if (playSoundOnNew && newIds.length > 0) playBeep();
       render();
@@ -695,6 +830,380 @@
       modal.classList.add('flex');
     }
 
+    /** Emite ticket Verifactu consolidado para una cuenta cerrada (o
+     *  cerrándose). Reutiliza el endpoint serverless usado para pedidos
+     *  individuales: simplemente le mandamos el "pedido virtual" generado
+     *  por `accounts.consolidatedOrder()`. */
+    async function emitAccountInvoice(accountId) {
+      if (!CFG) {
+        alert('Falta paninoteca-config.js — no se puede emitir el ticket.');
+        return;
+      }
+      const account = window.OrdersStore.accounts.get(accountId);
+      if (!account) return;
+      if (account.invoiceStatus === 'emitida') {
+        openAccountTicketModal(account); return;
+      }
+
+      let virtualOrder;
+      try {
+        virtualOrder = window.OrdersStore.accounts.consolidatedOrder(accountId);
+      } catch (e) { alert(e.message); return; }
+
+      const numero = window.OrdersStore.nextInvoiceNumber();
+      const serie  = CFG.serieFactura;
+      window.OrdersStore.accounts.markInvoiceEmitting(accountId, { numero, serie });
+      syncFromStore({ playSoundOnNew: false });
+
+      let res, body;
+      try {
+        res = await fetch(CFG.apiEndpoint, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order: virtualOrder,
+            invoiceNumber: numero,
+            serie,
+            ivaDefault:  CFG.ivaDefault,
+            ivaByItemId: CFG.ivaByItemId || {},
+          }),
+        });
+      } catch (e) {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const isFileProtocol = location.protocol === 'file:';
+        const hint = isFileProtocol
+          ? 'Estás abriendo la página con file:// — ábrela desde un servidor (netlify dev).'
+          : `El endpoint ${CFG.apiEndpoint} no responde. Si estás en local, arranca "netlify dev".`;
+        window.OrdersStore.accounts.setInvoiceError(accountId, `Failed to fetch: ${e.message}\n\n${hint}`);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`No se pudo emitir el ticket.\n\n${hint}\n\n(Detalle: ${e.message})`);
+        return;
+      }
+
+      try { body = await res.json(); }
+      catch (e) {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const text = await res.clone().text().catch(() => '');
+        const looksLikeHtml = /^\s*<(!DOCTYPE|html)/i.test(text);
+        const hint = looksLikeHtml
+          ? `El servidor devolvió HTML en lugar de JSON (HTTP ${res.status}). Probablemente /api/ no está activo.`
+          : `Respuesta no JSON del servidor (HTTP ${res.status}).`;
+        window.OrdersStore.accounts.setInvoiceError(accountId, hint);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`No se pudo emitir el ticket.\n\n${hint}`);
+        return;
+      }
+
+      if (!res.ok || !body || !body.ok) {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        const msg = (body && (body.error || (body.verifacti && JSON.stringify(body.verifacti)))) ||
+                    `HTTP ${res.status}`;
+        window.OrdersStore.accounts.setInvoiceError(accountId, msg);
+        syncFromStore({ playSoundOnNew: false });
+        alert(`Verifactu rechazó la emisión:\n\n${msg}`);
+        return;
+      }
+
+      const v = body.verifacti || {};
+      const updated = window.OrdersStore.accounts.setInvoice(accountId, {
+        uuid:   v.uuid   || v.id    || null,
+        qr:     v.qr     || v.qr_base64 || v.image || null,
+        huella: v.huella || v.hash  || null,
+        numero,
+        serie,
+        fecha:  body.payload && body.payload.fecha_expedicion,
+        env:    body.env,
+      });
+      syncFromStore({ playSoundOnNew: false });
+      openAccountTicketModal(updated);
+    }
+
+    /** Construye un "pedido virtual" consolidando varios pedidos de la
+     *  misma cuenta para emitir un único ticket Verifactu. Items con
+     *  mismo id+variant+price se suman para que el ticket sea legible. */
+    function buildConsolidatedOrder(orders, account) {
+      const merged = new Map();
+      for (const o of orders) {
+        for (const it of (o.items || [])) {
+          const key = [it.id, it.variant || '', String(it.price)].join('|');
+          const acc = merged.get(key) || { ...it, quantity: 0 };
+          acc.quantity += Number(it.quantity) || 0;
+          merged.set(key, acc);
+        }
+      }
+      const items = Array.from(merged.values());
+      const total = items.reduce((s, it) => s + it.price * it.quantity, 0);
+      const notes = orders.map(o => o.notes).filter(Boolean).join(' | ').slice(0, 500);
+      return {
+        id:        account ? -account.id : -orders[0].id,
+        code:      account ? 'C' + account.code : 'C' + orders[0].code,
+        items,
+        total:     Math.round(total * 100) / 100,
+        table:     account ? account.name : (orders[0].table || null),
+        notes:     notes || null,
+        accountId: account ? account.id : null,
+        createdAt: orders[0].createdAt,
+        updatedAt: Date.now(),
+      };
+    }
+
+    /** Cobra un pedido y lo mueve a "Pagado":
+     *   - Si el pedido pertenece a una cuenta y hay otros pedidos en
+     *     "Entregado" en esa misma cuenta, se cobra TODO junto con un
+     *     único ticket consolidado y los pedidos se mueven todos a
+     *     "Pagado".
+     *   - Si no, se cobra solo este pedido (ticket individual).
+     */
+    async function chargeOrder(orderId) {
+      if (!CFG) {
+        alert('Falta paninoteca-config.js — no se puede emitir el ticket.');
+        return;
+      }
+      const order = window.OrdersStore.get(orderId);
+      if (!order || order.status !== 'entregado') return;
+
+      // Hermanos a cobrar juntos: pedidos de la misma cuenta que aún
+      // están en "entregado" y no tienen ticket emitido propio.
+      let toCharge = [order];
+      let account  = null;
+      if (order.accountId != null) {
+        const acc = window.OrdersStore.accounts.get(order.accountId);
+        if (acc) {
+          account = acc;
+          toCharge = window.OrdersStore.list().filter(o =>
+            o.accountId === acc.id &&
+            o.status === 'entregado' &&
+            (o.invoiceStatus || 'none') !== 'emitida'
+          );
+          if (toCharge.length === 0) toCharge = [order];
+        }
+      }
+
+      const isConsolidated = toCharge.length > 1 || (account && toCharge.length >= 1);
+      const virtualOrder = isConsolidated
+        ? buildConsolidatedOrder(toCharge, account)
+        : order;
+
+      const numero = window.OrdersStore.nextInvoiceNumber();
+      const serie  = CFG.serieFactura;
+
+      // Solo registramos el ticket en la cuenta si está abierta y aún
+      // no tiene factura emitida (la primera cobranza de la cuenta).
+      // Cobros posteriores (cuenta ya cerrada) solo afectan a los
+      // pedidos individuales para no sobrescribir el ticket original.
+      const accountIsActive = !!account && account.status === 'abierta'
+        && (account.invoiceStatus || 'none') !== 'emitida';
+
+      toCharge.forEach(o => {
+        try { window.OrdersStore.markInvoiceEmitting(o.id, { numero, serie }); } catch (_) {}
+      });
+      if (accountIsActive) {
+        try { window.OrdersStore.accounts.markInvoiceEmitting(account.id, { numero, serie }); } catch (_) {}
+      }
+      syncFromStore({ playSoundOnNew: false });
+
+      const onError = (msg) => {
+        window.OrdersStore.releaseInvoiceNumber(numero);
+        toCharge.forEach(o => {
+          try { window.OrdersStore.setInvoiceError(o.id, msg); } catch (_) {}
+        });
+        if (accountIsActive) {
+          try { window.OrdersStore.accounts.setInvoiceError(account.id, msg); } catch (_) {}
+        }
+        syncFromStore({ playSoundOnNew: false });
+      };
+
+      let res, body;
+      try {
+        res = await fetch(CFG.apiEndpoint, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order: virtualOrder,
+            invoiceNumber: numero,
+            serie,
+            ivaDefault:  CFG.ivaDefault,
+            ivaByItemId: CFG.ivaByItemId || {},
+          }),
+        });
+      } catch (e) {
+        const isFileProtocol = location.protocol === 'file:';
+        const hint = isFileProtocol
+          ? 'Estás abriendo la página con file:// — ábrela desde un servidor (netlify dev).'
+          : `El endpoint ${CFG.apiEndpoint} no responde. Si estás en local, arranca "netlify dev".`;
+        onError(`Failed to fetch: ${e.message}\n\n${hint}`);
+        alert(`No se pudo emitir el ticket.\n\n${hint}\n\n(Detalle: ${e.message})`);
+        return;
+      }
+
+      try { body = await res.json(); }
+      catch (e) {
+        const text = await res.clone().text().catch(() => '');
+        const looksLikeHtml = /^\s*<(!DOCTYPE|html)/i.test(text);
+        const hint = looksLikeHtml
+          ? `El servidor devolvió HTML en lugar de JSON (HTTP ${res.status}). Probablemente /api/ no está activo.`
+          : `Respuesta no JSON del servidor (HTTP ${res.status}).`;
+        onError(hint);
+        alert(`No se pudo emitir el ticket.\n\n${hint}`);
+        return;
+      }
+
+      if (!res.ok || !body || !body.ok) {
+        const msg = (body && (body.error || (body.verifacti && JSON.stringify(body.verifacti)))) ||
+                    `HTTP ${res.status}`;
+        onError(msg);
+        alert(`Verifactu rechazó la emisión:\n\n${msg}`);
+        return;
+      }
+
+      const v = body.verifacti || {};
+      const invoiceData = {
+        uuid:   v.uuid   || v.id    || null,
+        qr:     v.qr     || v.qr_base64 || v.image || null,
+        huella: v.huella || v.hash  || null,
+        numero,
+        serie,
+        fecha:  body.payload && body.payload.fecha_expedicion,
+        env:    body.env,
+      };
+
+      // Persistimos los datos del ticket en cada pedido implicado y los
+      // movemos a "pagado". También cerramos la cuenta si aplica, para
+      // que próximos pedidos a esa misma mesa abran una cuenta nueva.
+      toCharge.forEach(o => {
+        try {
+          window.OrdersStore.setInvoice(o.id, invoiceData);
+          window.OrdersStore.updateStatus(o.id, 'pagado');
+        } catch (_) {}
+      });
+      if (accountIsActive) {
+        try {
+          window.OrdersStore.accounts.setInvoice(account.id, invoiceData);
+          window.OrdersStore.accounts.close(account.id);
+        } catch (_) {}
+      }
+      syncFromStore({ playSoundOnNew: false });
+
+      // Mostramos el ticket: si fue consolidado, el "pedido virtual"
+      // tiene todos los items combinados; si fue individual, el pedido.
+      const printable = isConsolidated
+        ? Object.assign({}, virtualOrder, { invoice: invoiceData })
+        : window.OrdersStore.get(orderId);
+      if (printable) openTicketModal(printable);
+    }
+
+    /** Abre el modal del ticket de un pedido ya cobrado. Si pertenece a
+     *  una cuenta consolidada, reconstruye el pedido virtual para que
+     *  el ticket muestre todos los items que se cobraron juntos. */
+    function openTicketForOrder(order) {
+      if (!order.invoice) return;
+      if (order.accountId != null) {
+        const account = window.OrdersStore.accounts.get(order.accountId);
+        // Pedidos pagados de la misma cuenta con el mismo nº de factura.
+        const siblings = window.OrdersStore.list().filter(o =>
+          o.accountId === order.accountId &&
+          o.invoice && order.invoice &&
+          String(o.invoice.numero) === String(order.invoice.numero) &&
+          o.invoice.serie === order.invoice.serie
+        );
+        if (siblings.length > 1) {
+          const virtual = buildConsolidatedOrder(siblings, account);
+          virtual.invoice = order.invoice;
+          openTicketModal(virtual);
+          return;
+        }
+      }
+      openTicketModal(order);
+    }
+
+    /** ---------- Modal: asignar mesa / cuenta a un pedido ---------- */
+
+    const assignModal       = document.getElementById('assign-modal');
+    const assignTargetEl    = document.getElementById('assign-modal-target');
+    const assignNameInput   = document.getElementById('assign-name-input');
+    const assignNameOptions = document.getElementById('assign-name-options');
+    const assignError       = document.getElementById('assign-modal-error');
+    let assignTargetOrderId = null;
+
+    function openAssignModal(orderId) {
+      const order = window.OrdersStore.get(orderId);
+      if (!order) return;
+      assignTargetOrderId = orderId;
+
+      const linkedAccount = order.accountId != null
+        ? window.OrdersStore.accounts.get(order.accountId)
+        : null;
+      const currentName = linkedAccount ? linkedAccount.name : (order.table || '');
+
+      assignTargetEl.textContent = `#${order.code}`;
+      assignNameInput.value = currentName;
+      assignError.classList.add('hidden');
+      assignError.textContent = '';
+
+      // Datalist con las cuentas abiertas — autocompletado al escribir.
+      const open = window.OrdersStore.accounts.listOpen();
+      assignNameOptions.innerHTML = open
+        .map(a => `<option value="${escapeHtml(a.name)}"></option>`)
+        .join('');
+
+      assignModal.classList.remove('hidden');
+      assignModal.classList.add('flex');
+      setTimeout(() => { assignNameInput.focus(); assignNameInput.select(); }, 50);
+    }
+
+    function closeAssignModal() {
+      assignModal.classList.add('hidden');
+      assignModal.classList.remove('flex');
+      assignTargetOrderId = null;
+    }
+
+    /** Guarda la asignación: actualiza `table` y vincula a una cuenta.
+     *  Si no existe una cuenta abierta con ese nombre, la crea de forma
+     *  transparente — sin necesidad de panel de cuentas. */
+    function submitAssignModal() {
+      if (assignTargetOrderId == null) return closeAssignModal();
+      const name = assignNameInput.value.trim();
+      const order = window.OrdersStore.get(assignTargetOrderId);
+      if (!order) return closeAssignModal();
+
+      try {
+        if (!name) {
+          // "Quitar mesa": desvinculamos cuenta y limpiamos table.
+          window.OrdersStore.assignToAccount(order.id, { table: null, accountId: null });
+        } else {
+          // Buscar cuenta abierta con ese nombre, crear si no existe.
+          let account = window.OrdersStore.accounts.listOpen()
+            .find(a => a.name.toLowerCase() === name.toLowerCase());
+          if (!account) {
+            account = window.OrdersStore.accounts.open(name);
+          }
+          window.OrdersStore.assignToAccount(order.id, {
+            table: account.name,
+            accountId: account.id,
+          });
+        }
+        closeAssignModal();
+        syncFromStore({ playSoundOnNew: false });
+      } catch (e) {
+        assignError.textContent = e.message;
+        assignError.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('assign-modal-cancel').addEventListener('click', closeAssignModal);
+    document.getElementById('assign-modal-ok').addEventListener('click', submitAssignModal);
+    document.getElementById('assign-modal-clear').addEventListener('click', () => {
+      assignNameInput.value = '';
+      submitAssignModal();
+    });
+    assignNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submitAssignModal(); }
+      if (e.key === 'Escape') closeAssignModal();
+    });
+    assignModal.addEventListener('click', (e) => {
+      if (e.target.id === 'assign-modal') closeAssignModal();
+    });
+
     document.getElementById('ticket-close').addEventListener('click', () => {
       const m = document.getElementById('ticket-modal');
       m.classList.add('hidden');
@@ -711,7 +1220,7 @@
     document.getElementById('hide-finished').addEventListener('click', () => {
       hideFinished = !hideFinished;
       document.getElementById('hide-finished-label').textContent =
-        hideFinished ? 'Mostrar finalizados' : 'Ocultar finalizados';
+        hideFinished ? 'Mostrar Pagado' : 'Ocultar Pagado';
       render();
     });
 

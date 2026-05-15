@@ -7,14 +7,34 @@
  *   Barra Entera) que determinan el precio.
  * - Los CAFÉS pueden definir opciones adicionales en el propio item:
  *     • `sizes`            → variantes de tamaño con su precio.
- *     • `avenaSurcharge`   → extra al cambiar la leche normal por avena.
+ *     • `milks`            → array de ids de leches admitidas (ver
+ *                            `milkTypes` global). Si está presente y tiene
+ *                            ≥2 leches, se muestra el selector de leche.
+ *     • `milkSurcharges`   → override por café del recargo de una leche
+ *                            concreta (ej. `{ avena: 0.20 }` si este café
+ *                            cobra 0,20 € por avena en vez del global).
  *     • `decafSurcharge`   → extra al pedirlo descafeinado.
  *   Si un café no declara una opción, ese toggle no se muestra.
  * - El resto de secciones (Montaditos, Sandwich/Toast, Platos, Bebidas)
  *   tienen un precio fijo por unidad.
+ *
+ * Estos datos son la SEMILLA inicial. La capa `menu-store.js` los carga la
+ * primera vez y deja al usuario editarlos desde `/inventario`. Una vez
+ * guardados, todas las páginas leen del store (localStorage) y este
+ * archivo solo se usa para "Restaurar valores por defecto".
  */
 
 window.MENU_DATA = {
+  /** Registro global de tipos de leche disponibles. Cualquier café puede
+   *  declarar `milks: ['normal', 'avena', ...]` para ofrecer al cliente
+   *  esas variantes. El `surcharge` se aplica salvo que el café concreto
+   *  lo sobrescriba en `milkSurcharges`. El `icon` referencia un id en
+   *  `COFFEE_OPT_ICONS` (ver index.html). */
+  milkTypes: [
+    { id: 'normal',    label: 'Leche normal',     icon: 'milk_normal',    surcharge: 0    },
+    { id: 'avena',     label: 'Leche de avena',   icon: 'milk_avena',     surcharge: 0.10 },
+  ],
+
   paniniFormats: [
     { id: 'bocadillo', label: 'Bocadillo', price: 3.5 },
     { id: 'medio',     label: '1/2 Bocadillo', price: 2.5 },
@@ -206,6 +226,46 @@ window.MENU_DATA = {
     ],
   },
 
+  /**
+   * Sección especial: platos preparados a pedido. No tienen precio fijo en
+   * carta y requieren reserva con antelación. Por eso se renderizan como
+   * tarjetas informativas (sin botones de añadir al carrito) y con un CTA
+   * para llamar a la cafetería. Fuente: https://punto14.es/2025/01/29/por-encargo/
+   */
+  porEncargo: {
+    title: 'Por Encargo',
+    subtitle: 'Sabores únicos, hechos a pedido',
+    note: 'Reserva con antelación para disfrutar de estos platos preparados especialmente para ti.',
+    phone: '+34 922 89 62 33',
+    phoneTel: '+34922896233',
+    items: [
+      {
+        id: 'enc-pizza',
+        emoji: '🍕',
+        name: 'Pizza',
+        description: 'Masa crujiente, salsa de tomate casera y los mejores ingredientes. Cada bocado es un viaje a Italia.',
+      },
+      {
+        id: 'enc-lasagna',
+        emoji: '🍜',
+        name: 'Lasaña',
+        description: 'Capas de pasta, carne jugosa, bechamel cremosa y un toque de gratinado dorado. Un clásico que conquista corazones.',
+      },
+      {
+        id: 'enc-spezzatino',
+        emoji: '🍲',
+        name: 'Spezzatino',
+        description: 'Estofado de carne cocido a fuego lento, con una mezcla de especias y verduras. Una explosión de sabor reconfortante.',
+      },
+      {
+        id: 'enc-tiramisu',
+        emoji: '🍰',
+        name: 'Tiramisú',
+        description: 'Bizcochos empapados en café, crema suave de mascarpone y un toque de cacao. El final dulce perfecto.',
+      },
+    ],
+  },
+
   cafeteria: {
     title: 'Cafetería',
     groups: [
@@ -221,20 +281,20 @@ window.MENU_DATA = {
         items: [
           { id: 'cafe-cafe',            name: 'Café',                       price: 1.0, decafSurcharge: 0.10 },
           { id: 'cafe-espresso',        name: 'Espresso',                   price: 1.0, decafSurcharge: 0.10 },
-          { id: 'cafe-macchiato',       name: 'Café Macchiato',             price: 1.1, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
-          { id: 'cafe-cortado-natural', name: 'Cortado Natural',            price: 1.0, decafSurcharge: 0.20, avenaSurcharge: 0.20 },
-          { id: 'cafe-cortado-leche',   name: 'Cortado Leche / Leche',      price: 1.1, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-macchiato',       name: 'Café Macchiato',             price: 1.1, decafSurcharge: 0.10, milks: ['normal', 'avena'] },
+          { id: 'cafe-cortado-natural', name: 'Cortado Natural',            price: 1.0, decafSurcharge: 0.20, milks: ['normal', 'avena'], milkSurcharges: { avena: 0.20 } },
+          { id: 'cafe-cortado-leche',   name: 'Cortado Leche / Leche',      price: 1.1, decafSurcharge: 0.10, milks: ['normal', 'avena'] },
           { id: 'cafe-bonbon',          name: 'Bon Bon',                    price: 1.1, decafSurcharge: 0.10 },
-          { id: 'cafe-cortado-largo',   name: 'Cortado Natural Largo',      price: 1.2, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-cortado-largo',   name: 'Cortado Natural Largo',      price: 1.2, decafSurcharge: 0.10, milks: ['normal', 'avena'] },
           { id: 'cafe-bonbon-largo',    name: 'Bon Bon Largo',              price: 1.2, decafSurcharge: 0.10 },
           { id: 'cafe-americano',       name: 'Americano',                  price: 1.2, decafSurcharge: 0.20 },
           { id: 'cafe-americano-cond',  name: 'Americano con Condensada',   price: 1.3, decafSurcharge: 0.20 },
-          { id: 'cafe-barraquito',      name: 'Barraquito',                 price: 1.3, decafSurcharge: 0.00, avenaSurcharge: 0.10 },
+          { id: 'cafe-barraquito',      name: 'Barraquito',                 price: 1.3, decafSurcharge: 0.00, milks: ['normal', 'avena'] },
           {
             id: 'cafe-con-leche',
             name: 'Café con Leche',
             decafSurcharge: 0.10,
-            avenaSurcharge: 0.10,
+            milks: ['normal', 'avena'],
             // El precio base depende del tamaño elegido.
             sizes: [
               { id: 'normal', label: 'Normal',      price: 1.3, icon: 'size_normal' },
@@ -242,7 +302,7 @@ window.MENU_DATA = {
               { id: 'xxl',    label: 'XXL',         price: 1.9, icon: 'size_xxl' },
             ],
           },
-          { id: 'cafe-cappuccino',         name: 'Cappuccino',                      price: 1.3, decafSurcharge: 0.10, avenaSurcharge: 0.10 },
+          { id: 'cafe-cappuccino',         name: 'Cappuccino',                      price: 1.3, decafSurcharge: 0.10, milks: ['normal', 'avena'] },
           { id: 'cafe-hot-ciok',           name: 'Café con Leche "Hot Ciok"',       price: 2.5 },
           { id: 'cafe-barraq-especial',    name: 'Barraquito Especial (liq. 43)',   price: 1.9 },
           { id: 'cafe-sambuca',            name: 'Café con Sambuca',                price: 1.2 },
